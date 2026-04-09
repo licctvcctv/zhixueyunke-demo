@@ -16,6 +16,9 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   ChewieController? _chewieController;
   final _commentController = TextEditingController();
   bool _isVideoInitialized = false;
+  bool _initialized = false;
+  bool _isVideoError = false;
+  String _errorMessage = '';
 
   final List<Comment> _comments = [
     Comment(id: '1', author: '小明', content: '老师讲得很好，清晰易懂！', createdAt: '2024-03-15 14:30'),
@@ -28,16 +31,39 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   @override
   void initState() {
     super.initState();
-    _initializeVideoPlayer();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      _initializeVideoPlayer();
+    }
   }
 
   Future<void> _initializeVideoPlayer() async {
-    _videoPlayerController = VideoPlayerController.network(
-      'https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4',
+    final args =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    final lesson = args['lesson'] as Lesson;
+    String videoUrl = lesson.videoUrl;
+
+    // 替换不可用的视频源（flutter.github.io 在部分网络环境下不可访问）
+    if (videoUrl.isEmpty || videoUrl.contains('flutter.github.io')) {
+      videoUrl = 'https://vjs.zencdn.net/v/oceans.mp4';
+    }
+
+    _videoPlayerController = VideoPlayerController.networkUrl(
+      Uri.parse(videoUrl),
     );
 
     try {
-      await _videoPlayerController.initialize();
+      await _videoPlayerController.initialize().timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw Exception('视频加载超时，请检查网络连接');
+        },
+      );
       _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController,
         autoPlay: false,
@@ -70,7 +96,25 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
       }
     } catch (e) {
       debugPrint('视频初始化失败: $e');
+      if (mounted) {
+        setState(() {
+          _isVideoError = true;
+          _errorMessage = '$e';
+        });
+      }
     }
+  }
+
+  Future<void> _retryVideo() async {
+    setState(() {
+      _isVideoError = false;
+      _errorMessage = '';
+      _isVideoInitialized = false;
+    });
+    _videoPlayerController.dispose();
+    _chewieController?.dispose();
+    _chewieController = null;
+    await _initializeVideoPlayer();
   }
 
   @override
@@ -123,11 +167,56 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
             aspectRatio: 16 / 9,
             child: Container(
               color: Colors.black,
-              child: _isVideoInitialized && _chewieController != null
-                  ? Chewie(controller: _chewieController!)
-                  : const Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    ),
+              child: _isVideoError
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline,
+                              color: Colors.white, size: 48),
+                          const SizedBox(height: 8),
+                          Text(
+                            '视频加载失败',
+                            style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: 15),
+                          ),
+                          const SizedBox(height: 4),
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 32),
+                            child: Text(
+                              _errorMessage,
+                              style: TextStyle(
+                                  color: Colors.white.withOpacity(0.5),
+                                  fontSize: 12),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _retryVideo,
+                            icon: const Icon(Icons.refresh, size: 18),
+                            label: const Text('重试'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4A90D9),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : _isVideoInitialized && _chewieController != null
+                      ? Chewie(controller: _chewieController!)
+                      : const Center(
+                          child:
+                              CircularProgressIndicator(color: Colors.white),
+                        ),
             ),
           ),
 

@@ -1,11 +1,13 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThanOrEqual, Like } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { Course } from '../entities/course.entity';
 import { Post } from '../entities/post.entity';
 import { ClassEntity } from '../entities/class.entity';
+import { ClassMember } from '../entities/class-member.entity';
 import { Question } from '../entities/question.entity';
+import { Answer } from '../entities/answer.entity';
 import { Lesson } from '../entities/lesson.entity';
 import { Comment } from '../entities/comment.entity';
 
@@ -16,7 +18,9 @@ export class AdminService {
     @InjectRepository(Course) private courseRepo: Repository<Course>,
     @InjectRepository(Post) private postRepo: Repository<Post>,
     @InjectRepository(ClassEntity) private classRepo: Repository<ClassEntity>,
+    @InjectRepository(ClassMember) private classMemberRepo: Repository<ClassMember>,
     @InjectRepository(Question) private questionRepo: Repository<Question>,
+    @InjectRepository(Answer) private answerRepo: Repository<Answer>,
     @InjectRepository(Lesson) private lessonRepo: Repository<Lesson>,
     @InjectRepository(Comment) private commentRepo: Repository<Comment>,
   ) {}
@@ -26,26 +30,47 @@ export class AdminService {
   }
 
   async getStats() {
-    const [userCount, courseCount, postCount, classCount, questionCount, lessonCount, commentCount] =
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    const [totalUsers, totalCourses, totalPosts, totalClasses, totalQuestions, newUsersThisWeek, recentUsersRaw, recentCourses] =
       await Promise.all([
         this.userRepo.count(),
         this.courseRepo.count(),
         this.postRepo.count(),
         this.classRepo.count(),
         this.questionRepo.count(),
-        this.lessonRepo.count(),
-        this.commentRepo.count(),
+        this.userRepo.count({ where: { createdAt: MoreThanOrEqual(oneWeekAgo) } }),
+        this.userRepo.find({ order: { createdAt: 'DESC' }, take: 5 }),
+        this.courseRepo.find({ order: { createdAt: 'DESC' }, take: 5 }),
       ]);
-    return { userCount, courseCount, postCount, classCount, questionCount, lessonCount, commentCount };
+
+    const recentUsers = recentUsersRaw.map(({ password, ...rest }) => rest);
+
+    return {
+      totalUsers,
+      totalCourses,
+      totalPosts,
+      totalClasses,
+      totalQuestions,
+      newUsersThisWeek,
+      recentUsers,
+      recentCourses,
+    };
   }
 
-  async getUsers(skip = 0, limit = 20) {
-    const [users, total] = await this.userRepo.findAndCount({
-      order: { createdAt: 'DESC' },
-      skip,
-      take: limit,
-    });
-    return { data: users.map(({ password, ...u }) => u), total };
+  async getUsers(skip = 0, limit = 20, search?: string) {
+    const qb = this.userRepo.createQueryBuilder('u');
+    if (search) {
+      qb.where('u.name LIKE :s OR u.email LIKE :s', { s: `%${search}%` });
+    }
+    qb.orderBy('u.createdAt', 'DESC').skip(skip).take(limit);
+    const [users, total] = await qb.getManyAndCount();
+    const list = users.map(({ password, ...u }) => ({
+      ...u,
+      status: u.status === 1 ? 'active' : 'disabled',
+    }));
+    return { list, total };
   }
 
   async updateUser(id: number, data: Partial<User>) {
@@ -55,13 +80,15 @@ export class AdminService {
     return rest;
   }
 
-  async getCourses(skip = 0, limit = 20) {
-    const [data, total] = await this.courseRepo.findAndCount({
-      order: { createdAt: 'DESC' },
-      skip,
-      take: limit,
-    });
-    return { data, total };
+  async getCourses(skip = 0, limit = 20, search?: string) {
+    const qb = this.courseRepo.createQueryBuilder('c');
+    if (search) {
+      qb.where('c.title LIKE :s OR c.teacherName LIKE :s', { s: `%${search}%` });
+    }
+    qb.orderBy('c.createdAt', 'DESC').skip(skip).take(limit);
+    const [data, total] = await qb.getManyAndCount();
+    const list = data.map((c) => ({ ...c, instructor: c.teacherName }));
+    return { list, total };
   }
 
   async deleteCourse(id: number) {
@@ -73,18 +100,51 @@ export class AdminService {
     return { message: '已删除' };
   }
 
-  async getPosts(skip = 0, limit = 20) {
-    const [data, total] = await this.postRepo.findAndCount({
-      order: { createdAt: 'DESC' },
-      skip,
-      take: limit,
-    });
-    return { data, total };
+  async getPosts(skip = 0, limit = 20, search?: string) {
+    const qb = this.postRepo.createQueryBuilder('p');
+    if (search) {
+      qb.where('p.content LIKE :s OR p.authorName LIKE :s', { s: `%${search}%` });
+    }
+    qb.orderBy('p.createdAt', 'DESC').skip(skip).take(limit);
+    const [list, total] = await qb.getManyAndCount();
+    return { list, total };
   }
 
   async deletePost(id: number) {
     await this.commentRepo.delete({ targetType: 'post', targetId: id });
     await this.postRepo.delete(id);
+    return { message: '已删除' };
+  }
+
+  async getClasses(skip = 0, limit = 20, search?: string) {
+    const qb = this.classRepo.createQueryBuilder('c');
+    if (search) {
+      qb.where('c.name LIKE :s OR c.teacherName LIKE :s', { s: `%${search}%` });
+    }
+    qb.orderBy('c.createdAt', 'DESC').skip(skip).take(limit);
+    const [list, total] = await qb.getManyAndCount();
+    return { list, total };
+  }
+
+  async deleteClass(id: number) {
+    await this.classMemberRepo.delete({ classId: id });
+    await this.classRepo.delete(id);
+    return { message: '已删除' };
+  }
+
+  async getQuestions(skip = 0, limit = 20, search?: string) {
+    const qb = this.questionRepo.createQueryBuilder('q');
+    if (search) {
+      qb.where('q.title LIKE :s OR q.content LIKE :s', { s: `%${search}%` });
+    }
+    qb.orderBy('q.createdAt', 'DESC').skip(skip).take(limit);
+    const [list, total] = await qb.getManyAndCount();
+    return { list, total };
+  }
+
+  async deleteQuestion(id: number) {
+    await this.answerRepo.delete({ questionId: id });
+    await this.questionRepo.delete(id);
     return { message: '已删除' };
   }
 }

@@ -16,6 +16,8 @@ class _ClassListPageState extends State<ClassListPage> {
   List<ClassModel> _classes = [];
   bool _loading = true;
   String? _error;
+  final Set<int> _joinedClassIds = {};
+  final Set<int> _joiningClassIds = {};
 
   @override
   void initState() {
@@ -33,6 +35,40 @@ class _ClassListPageState extends State<ClassListPage> {
       setState(() { _classes = list; _loading = false; });
     } catch (e) {
       setState(() { _error = '加载失败，请检查网络'; _loading = false; });
+    }
+  }
+
+  Future<void> _joinClass(int classId) async {
+    setState(() => _joiningClassIds.add(classId));
+    try {
+      await ApiService().post('${Api.classes}/$classId/join');
+      if (mounted) {
+        setState(() {
+          _joinedClassIds.add(classId);
+          _joiningClassIds.remove(classId);
+        });
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('加入成功')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _joiningClassIds.remove(classId));
+        final errMsg = e.toString();
+        if (errMsg.contains('400') || errMsg.contains('已加入')) {
+          setState(() => _joinedClassIds.add(classId));
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('已加入该班级')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('加入失败，请重试')),
+          );
+        }
+      }
     }
   }
 
@@ -140,21 +176,48 @@ class _ClassListPageState extends State<ClassListPage> {
                 ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFF50C878).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                '已加入',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFF50C878),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
+            _joinedClassIds.contains(cls.id)
+                ? Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF50C878).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      '已加入',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF50C878),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  )
+                : GestureDetector(
+                    onTap: _joiningClassIds.contains(cls.id)
+                        ? null
+                        : () => _joinClass(cls.id),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4A90D9).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: _joiningClassIds.contains(cls.id)
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text(
+                              '加入',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF4A90D9),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                    ),
+                  ),
           ],
         ),
       ),

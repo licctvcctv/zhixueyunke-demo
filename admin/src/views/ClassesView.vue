@@ -1,10 +1,10 @@
 <template>
   <div>
     <div class="page-header">
-      <h2>帖子管理</h2>
+      <h2>班级管理</h2>
       <el-input
         v-model="search"
-        placeholder="搜索帖子..."
+        placeholder="搜索班级..."
         prefix-icon="Search"
         style="width: 260px"
         clearable
@@ -13,18 +13,10 @@
     </div>
 
     <el-card>
-      <el-table :data="posts" stripe v-loading="loading">
-        <el-table-column prop="author" label="作者" width="120">
-          <template #default="{ row }">
-            {{ row.authorName || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="content" label="内容" min-width="300" show-overflow-tooltip />
-        <el-table-column prop="likes" label="点赞数" width="100">
-          <template #default="{ row }">
-            {{ row.likes || row.likeCount || 0 }}
-          </template>
-        </el-table-column>
+      <el-table :data="classes" stripe v-loading="loading">
+        <el-table-column prop="name" label="班级名称" min-width="180" />
+        <el-table-column prop="teacherName" label="教师" width="120" />
+        <el-table-column prop="studentCount" label="学生数" width="100" />
         <el-table-column prop="createdAt" label="创建时间" width="180">
           <template #default="{ row }">
             {{ formatDate(row.createdAt) }}
@@ -51,8 +43,8 @@
           :total="total"
           :page-sizes="[10, 20, 50]"
           layout="total, sizes, prev, pager, next"
-          @size-change="fetchPosts"
-          @current-change="fetchPosts"
+          @size-change="fetchClasses"
+          @current-change="fetchClasses"
         />
       </div>
     </el-card>
@@ -65,7 +57,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../api'
 import { formatDate } from '../utils/format'
 
-const posts = ref([])
+const classes = ref([])
 const loading = ref(false)
 const search = ref('')
 const page = ref(1)
@@ -78,20 +70,20 @@ function handleSearch() {
   clearTimeout(searchTimer)
   searchTimer = setTimeout(() => {
     page.value = 1
-    fetchPosts()
+    fetchClasses()
   }, 300)
 }
 
-async function fetchPosts() {
+async function fetchClasses() {
   loading.value = true
   try {
-    const res = await api.get('/posts', {
+    const res = await api.get('/classes', {
       params: { page: page.value, pageSize: pageSize.value, search: search.value }
     })
-    posts.value = res.data.list || []
+    classes.value = res.data.list || []
     total.value = res.data.total || 0
   } catch (err) {
-    console.error('获取帖子列表失败', err)
+    console.error('获取班级列表失败', err)
   } finally {
     loading.value = false
   }
@@ -99,14 +91,14 @@ async function fetchPosts() {
 
 async function handleDelete(row) {
   try {
-    await ElMessageBox.confirm('确定要删除这条帖子吗？此操作不可撤销。', '警告', {
+    await ElMessageBox.confirm(`确定要删除班级 "${row.name}" 吗？此操作不可撤销。`, '警告', {
       type: 'warning',
       confirmButtonText: '确定删除',
       cancelButtonText: '取消'
     })
-    await api.delete(`/posts/${row.id}`)
+    await api.delete(`/classes/${row.id}`)
     ElMessage.success('删除成功')
-    fetchPosts()
+    fetchClasses()
   } catch (err) {
     if (err !== 'cancel') {
       ElMessage.error('删除失败')
@@ -114,7 +106,7 @@ async function handleDelete(row) {
   }
 }
 
-onMounted(fetchPosts)
+onMounted(fetchClasses)
 </script>
 
 <style scoped>

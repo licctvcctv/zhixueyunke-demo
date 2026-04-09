@@ -7,8 +7,8 @@ export class QaController {
   constructor(private qaService: QaService) {}
 
   @Get()
-  findAll(@Query('courseId') courseId?: string) {
-    return this.qaService.findAll(courseId ? +courseId : undefined);
+  findAll(@Query('courseId') courseId?: string, @Query('search') search?: string) {
+    return this.qaService.findAll(courseId ? +courseId : undefined, search);
   }
 
   @Get(':id')

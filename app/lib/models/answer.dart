@@ -18,7 +18,7 @@ class AnswerModel {
       id: json['id'] ?? 0,
       authorName: json['authorName'] ?? '',
       content: json['content'] ?? '',
-      isAccepted: json['isAccepted'] ?? false,
+      isAccepted: json['isAccepted'] == true || json['isAccepted'] == 1,
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
     );
   }

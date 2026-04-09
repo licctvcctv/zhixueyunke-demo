@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
+import '../config/api.dart';
 
 class CreatePostPage extends StatefulWidget {
   const CreatePostPage({Key? key}) : super(key: key);
@@ -10,6 +12,7 @@ class CreatePostPage extends StatefulWidget {
 class _CreatePostPageState extends State<CreatePostPage> {
   final _contentController = TextEditingController();
   bool _hasImage = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -17,19 +20,34 @@ class _CreatePostPageState extends State<CreatePostPage> {
     super.dispose();
   }
 
-  void _submitPost() {
+  Future<void> _submitPost() async {
     if (_contentController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('请输入内容')),
       );
       return;
     }
-
-    // Mock submit
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('发布成功！')),
-    );
-    Navigator.pop(context);
+    setState(() => _isSubmitting = true);
+    try {
+      final response = await ApiService().post(Api.posts, data: {
+        'content': _contentController.text.trim(),
+      });
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('发布失败，请重试')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -45,7 +63,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: ElevatedButton(
-              onPressed: _submitPost,
+              onPressed: _isSubmitting ? null : _submitPost,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF4A90D9),
                 shape: RoundedRectangleBorder(

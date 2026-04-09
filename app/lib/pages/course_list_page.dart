@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/course.dart';
 import '../widgets/course_card.dart';
@@ -19,16 +20,41 @@ class _CourseListPageState extends State<CourseListPage> {
   bool _loading = true;
   String? _error;
 
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
+  String _searchKeyword = '';
+
   @override
   void initState() {
     super.initState();
     _loadData();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      setState(() {
+        _searchKeyword = value.trim();
+      });
+      _loadData();
+    });
+  }
+
   Future<void> _loadData() async {
     try {
       setState(() { _loading = true; _error = null; });
-      final response = await ApiService().get(Api.courses);
+      final Map<String, dynamic> params = {};
+      if (_searchKeyword.isNotEmpty) {
+        params['search'] = _searchKeyword;
+      }
+      final response = await ApiService().get(Api.courses, params: params.isNotEmpty ? params : null);
       final list = (response.data as List)
           .map((e) => Course.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -58,6 +84,31 @@ class _CourseListPageState extends State<CourseListPage> {
       ),
       body: Column(
         children: [
+          // Search bar
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Container(
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F6FA),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _onSearchChanged,
+                decoration: const InputDecoration(
+                  hintText: '搜索课程...',
+                  hintStyle: TextStyle(fontSize: 14, color: Colors.grey),
+                  prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(vertical: 10),
+                ),
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+          ),
+
           // Category chips
           Container(
             color: Colors.white,
@@ -108,29 +159,36 @@ class _CourseListPageState extends State<CourseListPage> {
                           ],
                         ),
                       )
-                    : GridView.builder(
-                        padding: const EdgeInsets.all(16),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.72,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
-                        itemCount: _filteredCourses.length,
-                        itemBuilder: (context, index) {
-                          final course = _filteredCourses[index];
-                          return CourseCard(
-                            course: course,
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/courseDetail',
-                                arguments: course,
+                    : _filteredCourses.isEmpty
+                        ? Center(
+                            child: Text(
+                              '没有找到相关课程',
+                              style: TextStyle(color: Colors.grey[400]),
+                            ),
+                          )
+                        : GridView.builder(
+                            padding: const EdgeInsets.all(16),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.72,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                            ),
+                            itemCount: _filteredCourses.length,
+                            itemBuilder: (context, index) {
+                              final course = _filteredCourses[index];
+                              return CourseCard(
+                                course: course,
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/courseDetail',
+                                    arguments: course,
+                                  );
+                                },
                               );
                             },
-                          );
-                        },
-                      ),
+                          ),
           ),
         ],
       ),

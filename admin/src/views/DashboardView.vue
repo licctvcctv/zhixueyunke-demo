@@ -71,7 +71,7 @@
           </template>
           <el-table :data="stats.recentCourses || []" stripe size="small">
             <el-table-column prop="title" label="课程名称" />
-            <el-table-column prop="instructor" label="讲师" />
+            <el-table-column prop="teacherName" label="讲师" />
             <el-table-column prop="createdAt" label="创建时间">
               <template #default="{ row }">
                 {{ formatDate(row.createdAt) }}

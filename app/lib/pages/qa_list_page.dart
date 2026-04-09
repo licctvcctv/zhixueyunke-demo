@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/question.dart';
 import '../services/api_service.dart';
 import '../config/api.dart';
+import '../utils/time_utils.dart';
 import 'qa_detail_page.dart';
 import 'ask_question_page.dart';
 
@@ -170,7 +171,7 @@ class _QaListPageState extends State<QaListPage> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  '${q.createdAt.month}-${q.createdAt.day}',
+                  TimeUtils.timeAgoFromDate(q.createdAt),
                   style: TextStyle(fontSize: 11, color: Colors.grey[400]),
                 ),
               ],

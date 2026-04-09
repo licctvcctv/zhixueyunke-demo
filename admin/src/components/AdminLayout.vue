@@ -27,6 +27,14 @@
           <el-icon><ChatDotRound /></el-icon>
           <span>帖子管理</span>
         </el-menu-item>
+        <el-menu-item index="/classes">
+          <el-icon><OfficeBuilding /></el-icon>
+          <span>班级管理</span>
+        </el-menu-item>
+        <el-menu-item index="/questions">
+          <el-icon><QuestionFilled /></el-icon>
+          <span>问答管理</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>

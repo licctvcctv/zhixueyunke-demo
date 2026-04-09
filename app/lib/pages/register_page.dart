@@ -30,6 +30,7 @@ class _RegisterPageState extends State<RegisterPage> {
     if (_nameController.text.isEmpty ||
         _emailController.text.isEmpty ||
         _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('请填写所有必填项')),
       );
@@ -37,6 +38,7 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('两次密码不一致')),
       );
@@ -57,6 +59,7 @@ class _RegisterPageState extends State<RegisterPage> {
     if (success && mounted) {
       Navigator.pushReplacementNamed(context, '/main');
     } else if (mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('注册失败，请重试')),
       );

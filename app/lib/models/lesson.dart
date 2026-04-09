@@ -14,10 +14,14 @@ class Lesson {
   });
 
   factory Lesson.fromJson(Map<String, dynamic> json) {
+    final durationText = json['durationText'];
+    final rawDuration = json['duration'];
     return Lesson(
       id: json['id']?.toString() ?? '',
       title: json['title'] ?? '',
-      duration: json['duration'] ?? '',
+      duration: (durationText != null && durationText.toString().isNotEmpty)
+          ? durationText.toString()
+          : _formatDuration(rawDuration),
       videoUrl: json['videoUrl'] ?? '',
       order: json['orderNum'] ?? json['order'] ?? 0,
     );
@@ -31,5 +35,18 @@ class Lesson {
       'videoUrl': videoUrl,
       'order': order,
     };
+  }
+
+  static String _formatDuration(dynamic value) {
+    if (value == null) return '';
+    if (value is String) return value;
+
+    final seconds = value is num ? value.toInt() : int.tryParse(value.toString());
+    if (seconds == null) return value.toString();
+
+    final minutes = seconds ~/ 60;
+    final remainSeconds = seconds % 60;
+    if (minutes <= 0) return '${remainSeconds}秒';
+    return '${minutes}分${remainSeconds.toString().padLeft(2, '0')}秒';
   }
 }

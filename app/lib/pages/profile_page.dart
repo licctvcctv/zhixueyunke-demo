@@ -2,8 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  Future<void> _editProfile() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final user = authService.currentUser;
+    if (user == null) return;
+
+    final result = await Navigator.pushNamed(
+      context,
+      '/editProfile',
+      arguments: user,
+    );
+    if (result == true) {
+      // Refresh user info
+      await authService.init();
+      if (mounted) setState(() {});
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +98,23 @@ class ProfilePage extends StatelessWidget {
                           color: Colors.white.withOpacity(0.7),
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _editProfile,
+                        icon: const Icon(Icons.edit, size: 16, color: Colors.white),
+                        label: const Text(
+                          '编辑资料',
+                          style: TextStyle(color: Colors.white, fontSize: 13),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.white.withOpacity(0.6)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
 
                       // Stats row
                       Container(
@@ -192,7 +230,7 @@ class ProfilePage extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  _buildMenuItem(Icons.person_outline, '个人信息', const Color(0xFF4A90D9), () {}),
+                  _buildMenuItem(Icons.person_outline, '个人信息', const Color(0xFF4A90D9), _editProfile),
                   _divider(),
                   _buildMenuItem(Icons.favorite_outline, '我的收藏', const Color(0xFFFF6B6B), () {}),
                   _divider(),

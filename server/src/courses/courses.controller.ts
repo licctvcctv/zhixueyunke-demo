@@ -8,8 +8,8 @@ export class CoursesController {
   constructor(private coursesService: CoursesService) {}
 
   @Get()
-  findAll(@Query('category') category?: string) {
-    return this.coursesService.findAll(category);
+  findAll(@Query('category') category?: string, @Query('search') search?: string) {
+    return this.coursesService.findAll(category, search);
   }
 
   @Get('my/enrolled')

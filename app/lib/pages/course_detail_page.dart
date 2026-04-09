@@ -3,6 +3,7 @@ import '../config/api.dart';
 import '../config/colors.dart';
 import '../models/course.dart';
 import '../services/api_service.dart';
+import '../utils/time_utils.dart';
 import 'qa_list_page.dart';
 
 class CourseDetailPage extends StatefulWidget {
@@ -19,6 +20,8 @@ class _CourseDetailPageState extends State<CourseDetailPage>
   List<Map<String, dynamic>> _reviews = [];
   bool _isLoadingCourse = true;
   bool _isLoadingReviews = true;
+  bool _enrolled = false;
+  bool _enrolling = false;
 
   @override
   void initState() {
@@ -28,7 +31,53 @@ class _CourseDetailPageState extends State<CourseDetailPage>
       final course = ModalRoute.of(context)!.settings.arguments as Course;
       _fetchCourseDetail(course.id);
       _fetchReviews(course.id);
+      _checkEnrollment(course.id);
     });
+  }
+
+  Future<void> _checkEnrollment(String courseId) async {
+    try {
+      final response = await ApiService().get(Api.myEnrolled);
+      final list = response.data as List;
+      final enrolled = list.any((e) => (e['id']?.toString() ?? '') == courseId);
+      if (mounted) {
+        setState(() => _enrolled = enrolled);
+      }
+    } catch (e) {
+      // If not logged in or request fails, leave as not enrolled
+      debugPrint('检查报名状态失败: $e');
+    }
+  }
+
+  Future<void> _enrollCourse(String courseId) async {
+    setState(() => _enrolling = true);
+    try {
+      await ApiService().post('${Api.courses}/$courseId/enroll');
+      if (mounted) {
+        setState(() {
+          _enrolled = true;
+          _enrolling = false;
+        });
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('报名成功')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _enrolling = false);
+        // If already enrolled (400), set enrolled to true
+        final errMsg = e.toString();
+        if (errMsg.contains('400') || errMsg.contains('已报名')) {
+          setState(() => _enrolled = true);
+        } else {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('报名失败，请重试')),
+          );
+        }
+      }
+    }
   }
 
   @override
@@ -426,35 +475,64 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                 Expanded(
                   child: SizedBox(
                     height: 48,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        final c = _fullCourse ?? course;
-                        if (c.lessons.isNotEmpty) {
-                          Navigator.pushNamed(
-                            context,
-                            '/videoPlayer',
-                            arguments: {
-                              'lesson': c.lessons[0],
-                              'courseTitle': c.title,
+                    child: _enrolled
+                        ? ElevatedButton(
+                            onPressed: () {
+                              final c = _fullCourse ?? course;
+                              if (c.lessons.isNotEmpty) {
+                                Navigator.pushNamed(
+                                  context,
+                                  '/videoPlayer',
+                                  arguments: {
+                                    'lesson': c.lessons[0],
+                                    'courseTitle': c.title,
+                                  },
+                                );
+                              }
                             },
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4A90D9),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        '立即学习',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4A90D9),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              '继续学习',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          )
+                        : ElevatedButton(
+                            onPressed: _enrolling
+                                ? null
+                                : () => _enrollCourse(course.id),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4A90D9),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: _enrolling
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    '报名课程',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                          ),
                   ),
                 ),
               ],
@@ -531,7 +609,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
           ),
           const SizedBox(height: 8),
           Text(
-            date,
+            TimeUtils.timeAgo(date),
             style: TextStyle(fontSize: 11, color: Colors.grey[400]),
           ),
         ],

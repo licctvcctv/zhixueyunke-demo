@@ -11,10 +11,15 @@ export class QaService {
     @InjectRepository(Answer) private answerRepo: Repository<Answer>,
   ) {}
 
-  async findAll(courseId?: number) {
-    const where: any = {};
-    if (courseId) where.courseId = courseId;
-    return this.questionRepo.find({ where, order: { createdAt: 'DESC' } });
+  async findAll(courseId?: number, search?: string) {
+    let query = this.questionRepo.createQueryBuilder('question');
+    if (courseId) query = query.where('question.courseId = :courseId', { courseId });
+    if (search) {
+      const like = `%${search}%`;
+      query = query.andWhere('(question.title LIKE :s OR question.content LIKE :s)', { s: like });
+    }
+    query = query.orderBy('question.createdAt', 'DESC');
+    return query.getMany();
   }
 
   async findOne(id: number) {

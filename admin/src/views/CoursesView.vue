@@ -2,14 +2,17 @@
   <div>
     <div class="page-header">
       <h2>课程管理</h2>
-      <el-input
-        v-model="search"
-        placeholder="搜索课程..."
-        prefix-icon="Search"
-        style="width: 260px"
-        clearable
-        @input="handleSearch"
-      />
+      <div class="page-header-right">
+        <el-button type="primary" @click="showCreateDialog = true">新增课程</el-button>
+        <el-input
+          v-model="search"
+          placeholder="搜索课程..."
+          prefix-icon="Search"
+          style="width: 260px; margin-left: 12px"
+          clearable
+          @input="handleSearch"
+        />
+      </div>
     </div>
 
     <el-card>
@@ -61,13 +64,40 @@
         />
       </div>
     </el-card>
+
+    <el-dialog v-model="showCreateDialog" title="新增课程" width="500px">
+      <el-form :model="courseForm" label-width="80px">
+        <el-form-item label="课程名称">
+          <el-input v-model="courseForm.title" placeholder="请输入课程名称" />
+        </el-form-item>
+        <el-form-item label="描述">
+          <el-input v-model="courseForm.description" type="textarea" :rows="3" placeholder="请输入课程描述" />
+        </el-form-item>
+        <el-form-item label="分类">
+          <el-select v-model="courseForm.category" placeholder="请选择分类" style="width: 100%">
+            <el-option label="编程" value="编程" />
+            <el-option label="数学" value="数学" />
+            <el-option label="英语" value="英语" />
+            <el-option label="物理" value="物理" />
+            <el-option label="设计" value="设计" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="讲师">
+          <el-input v-model="courseForm.teacherName" placeholder="请输入讲师名称" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showCreateDialog = false">取消</el-button>
+        <el-button type="primary" :loading="creating" @click="handleCreate">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { api } from '../api'
+import { api, baseApi } from '../api'
 import { formatDate } from '../utils/format'
 
 const courses = ref([])
@@ -76,6 +106,15 @@ const search = ref('')
 const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+
+const showCreateDialog = ref(false)
+const creating = ref(false)
+const courseForm = reactive({
+  title: '',
+  description: '',
+  category: '',
+  teacherName: ''
+})
 
 let searchTimer = null
 
@@ -93,12 +132,39 @@ async function fetchCourses() {
     const res = await api.get('/courses', {
       params: { page: page.value, pageSize: pageSize.value, search: search.value }
     })
-    courses.value = res.data.list || res.data.courses || []
+    courses.value = res.data.list || []
     total.value = res.data.total || 0
   } catch (err) {
     console.error('获取课程列表失败', err)
   } finally {
     loading.value = false
+  }
+}
+
+async function handleCreate() {
+  if (!courseForm.title) {
+    ElMessage.warning('请输入课程名称')
+    return
+  }
+  creating.value = true
+  try {
+    await baseApi.post('/courses', {
+      title: courseForm.title,
+      description: courseForm.description,
+      category: courseForm.category,
+      teacherName: courseForm.teacherName
+    })
+    ElMessage.success('创建成功')
+    showCreateDialog.value = false
+    courseForm.title = ''
+    courseForm.description = ''
+    courseForm.category = ''
+    courseForm.teacherName = ''
+    fetchCourses()
+  } catch (err) {
+    ElMessage.error('创建失败')
+  } finally {
+    creating.value = false
   }
 }
 
@@ -109,7 +175,7 @@ async function handleDelete(row) {
       confirmButtonText: '确定删除',
       cancelButtonText: '取消'
     })
-    await api.delete(`/courses/${row._id || row.id}`)
+    await api.delete(`/courses/${row.id}`)
     ElMessage.success('删除成功')
     fetchCourses()
   } catch (err) {
@@ -134,6 +200,11 @@ onMounted(fetchCourses)
   margin: 0;
   font-size: 20px;
   color: #303133;
+}
+
+.page-header-right {
+  display: flex;
+  align-items: center;
 }
 
 .pagination-wrapper {

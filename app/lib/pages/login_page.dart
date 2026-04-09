@@ -10,7 +10,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _emailController = TextEditingController(text: 'demo@example.com');
+  final _emailController = TextEditingController(text: 'zhangsan@demo.com');
   final _passwordController = TextEditingController(text: '123456');
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -24,6 +24,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _login() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('请输入邮箱和密码')),
       );
@@ -43,6 +44,7 @@ class _LoginPageState extends State<LoginPage> {
     if (success && mounted) {
       Navigator.pushReplacementNamed(context, '/main');
     } else if (mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('登录失败，请检查邮箱和密码')),
       );

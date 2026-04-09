@@ -1,4 +1,4 @@
-import { Controller, Get, Post as HttpPost, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post as HttpPost, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -7,8 +7,8 @@ export class PostsController {
   constructor(private postsService: PostsService) {}
 
   @Get()
-  findAll() {
-    return this.postsService.findAll();
+  findAll(@Query('search') search?: string) {
+    return this.postsService.findAll(search);
   }
 
   @Get(':id')
@@ -30,7 +30,19 @@ export class PostsController {
 
   @UseGuards(JwtAuthGuard)
   @HttpPost(':id/like')
-  like(@Param('id') id: string) {
-    return this.postsService.like(+id);
+  like(@Param('id') id: string, @Request() req) {
+    return this.postsService.like(+id, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  delete(@Param('id') id: string, @Request() req) {
+    return this.postsService.deleteOwn(+id, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id/comments/:commentId')
+  deleteComment(@Param('commentId') commentId: string, @Request() req) {
+    return this.postsService.deleteOwnComment(+commentId, req.user.id);
   }
 }

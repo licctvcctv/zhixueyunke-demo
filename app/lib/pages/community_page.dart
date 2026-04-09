@@ -82,13 +82,15 @@ class _CommunityPageState extends State<CommunityPage> {
                   itemBuilder: (context, index) {
                     return PostCard(
                       post: _posts[index],
-                      onTap: () {
-                        Navigator.pushNamed(
+                      onTap: () async {
+                        await Navigator.pushNamed(
                           context,
                           '/postDetail',
                           arguments: _posts[index],
                         );
+                        _loadData();
                       },
+                      onDeleted: _loadData,
                     );
                   },
                 ),

@@ -11,8 +11,8 @@ class ApiService {
   ApiService._internal() {
     dio = Dio(BaseOptions(
       baseUrl: Api.baseUrl,
-      connectTimeout: 5000,
-      receiveTimeout: 3000,
+      connectTimeout: const Duration(seconds: 5),
+      receiveTimeout: const Duration(seconds: 3),
       headers: {
         'Content-Type': 'application/json',
       },

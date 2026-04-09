@@ -3,6 +3,7 @@ import '../config/api.dart';
 import '../models/question.dart';
 import '../models/answer.dart';
 import '../services/api_service.dart';
+import '../utils/time_utils.dart';
 
 class QaDetailPage extends StatefulWidget {
   final QuestionModel question;
@@ -66,6 +67,7 @@ class _QaDetailPageState extends State<QaDetailPage> {
         _answerController.clear();
         FocusScope.of(context).unfocus();
         if (mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('回答已提交')),
           );
@@ -75,6 +77,7 @@ class _QaDetailPageState extends State<QaDetailPage> {
     } catch (e) {
       debugPrint('提交回答失败: $e');
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('提交回答失败，请重试')),
         );
@@ -169,7 +172,7 @@ class _QaDetailPageState extends State<QaDetailPage> {
                             ),
                             const SizedBox(width: 12),
                             Text(
-                              '${q.createdAt.year}-${q.createdAt.month.toString().padLeft(2, '0')}-${q.createdAt.day.toString().padLeft(2, '0')}',
+                              TimeUtils.timeAgoFromDate(q.createdAt),
                               style: TextStyle(
                                   fontSize: 12, color: Colors.grey[400]),
                             ),
@@ -334,7 +337,7 @@ class _QaDetailPageState extends State<QaDetailPage> {
               ],
               const Spacer(),
               Text(
-                '${answer.createdAt.month}-${answer.createdAt.day} ${answer.createdAt.hour}:${answer.createdAt.minute.toString().padLeft(2, '0')}',
+                TimeUtils.timeAgoFromDate(answer.createdAt),
                 style: TextStyle(fontSize: 11, color: Colors.grey[400]),
               ),
             ],

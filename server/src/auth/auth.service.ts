@@ -45,4 +45,14 @@ export class AuthService {
     if (!user) throw new UnauthorizedException('用户不存在');
     return this.sanitize(user);
   }
+
+  async updateProfile(userId: number, body: { name?: string; bio?: string; avatar?: string }) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException('用户不存在');
+    if (body.name !== undefined) user.name = body.name;
+    if (body.bio !== undefined) user.bio = body.bio;
+    if (body.avatar !== undefined) user.avatar = body.avatar;
+    const saved = await this.userRepo.save(user);
+    return this.sanitize(saved);
+  }
 }

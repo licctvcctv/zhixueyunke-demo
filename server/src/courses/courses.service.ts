@@ -17,10 +17,15 @@ export class CoursesService {
     @InjectRepository(Progress) private progressRepo: Repository<Progress>,
   ) {}
 
-  async findAll(category?: string) {
-    const where: any = {};
-    if (category) where.category = category;
-    const courses = await this.courseRepo.find({ where, order: { createdAt: 'DESC' } });
+  async findAll(category?: string, search?: string) {
+    let query = this.courseRepo.createQueryBuilder('course');
+    if (category) query = query.where('course.category = :category', { category });
+    if (search) {
+      const like = `%${search}%`;
+      query = query.andWhere('(course.title LIKE :s OR course.description LIKE :s OR course.teacherName LIKE :s)', { s: like });
+    }
+    query = query.orderBy('course.createdAt', 'DESC');
+    const courses = await query.getMany();
     const result = [];
     for (const c of courses) {
       const lessonCount = await this.lessonRepo.count({ where: { courseId: c.id } });
@@ -33,7 +38,11 @@ export class CoursesService {
     const course = await this.courseRepo.findOne({ where: { id } });
     if (!course) throw new NotFoundException('课程不存在');
     const lessons = await this.lessonRepo.find({ where: { courseId: id }, order: { orderNum: 'ASC' } });
-    return { ...course, lessons };
+    const formattedLessons = lessons.map(l => ({
+      ...l,
+      durationText: `${Math.floor(l.duration / 60)}:${String(l.duration % 60).padStart(2, '0')}`,
+    }));
+    return { ...course, lessons: formattedLessons };
   }
 
   async create(data: Partial<Course>) {

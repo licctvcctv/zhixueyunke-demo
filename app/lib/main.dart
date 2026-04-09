@@ -12,6 +12,7 @@ import 'pages/settings_page.dart';
 import 'pages/about_page.dart';
 import 'pages/qa_list_page.dart';
 import 'pages/ask_question_page.dart';
+import 'pages/edit_profile_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,7 +52,17 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        initialRoute: '/login',
+        home: Consumer<AuthService>(
+          builder: (context, auth, _) {
+            if (!auth.isInitialized) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (auth.isLoggedIn) return const MainPage();
+            return const LoginPage();
+          },
+        ),
         routes: {
           '/login': (context) => const LoginPage(),
           '/register': (context) => const RegisterPage(),
@@ -64,6 +75,7 @@ class MyApp extends StatelessWidget {
           '/about': (context) => const AboutPage(),
           '/qa_list': (context) => const QaListPage(),
           '/ask_question': (context) => const AskQuestionPage(),
+          '/editProfile': (context) => const EditProfilePage(),
         },
       ),
     );

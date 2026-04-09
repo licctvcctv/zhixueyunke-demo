@@ -123,6 +123,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[300]),
                   onTap: () {
+                    ScaffoldMessenger.of(context).clearSnackBars();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('缓存已清除')),
                     );
@@ -147,6 +148,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[300]),
                   onTap: () {
+                    ScaffoldMessenger.of(context).clearSnackBars();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('已是最新版本')),
                     );

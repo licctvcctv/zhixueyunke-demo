@@ -7,10 +7,12 @@ import '../config/api.dart';
 class AuthService extends ChangeNotifier {
   User? _currentUser;
   bool _isLoggedIn = false;
+  bool _initialized = false;
   String? _token;
 
   User? get currentUser => _currentUser;
   bool get isLoggedIn => _isLoggedIn;
+  bool get isInitialized => _initialized;
   String? get token => _token;
 
   Future<void> init() async {
@@ -27,8 +29,9 @@ class AuthService extends ChangeNotifier {
         await prefs.remove('token');
         ApiService().clearToken();
       }
-      notifyListeners();
     }
+    _initialized = true;
+    notifyListeners();
   }
 
   Future<bool> _fetchProfile() async {

@@ -14,7 +14,7 @@ import { Answer } from './entities/answer.entity';
 import { Enrollment } from './entities/enrollment.entity';
 import { Progress } from './entities/progress.entity';
 
-const VIDEO_URL = 'https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4';
+const VIDEO_URL = 'https://vjs.zencdn.net/v/oceans.mp4';
 
 async function seed() {
   const ds = new DataSource({

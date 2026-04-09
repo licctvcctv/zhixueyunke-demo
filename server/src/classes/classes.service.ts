@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClassEntity } from '../entities/class.entity';
 import { ClassMember } from '../entities/class-member.entity';
+import { Course } from '../entities/course.entity';
+import { Post } from '../entities/post.entity';
 import { User } from '../entities/user.entity';
 
 @Injectable()
@@ -10,6 +12,8 @@ export class ClassesService {
   constructor(
     @InjectRepository(ClassEntity) private classRepo: Repository<ClassEntity>,
     @InjectRepository(ClassMember) private memberRepo: Repository<ClassMember>,
+    @InjectRepository(Course) private courseRepo: Repository<Course>,
+    @InjectRepository(Post) private postRepo: Repository<Post>,
     @InjectRepository(User) private userRepo: Repository<User>,
   ) {}
 
@@ -22,7 +26,16 @@ export class ClassesService {
     if (!cls) throw new NotFoundException('班级不存在');
     const members = await this.memberRepo.find({ where: { classId: id } });
     const memberDetails = await this.enrichMembers(members);
-    return { ...cls, members: memberDetails };
+    const courses = await this.courseRepo.find({
+      where: { teacherName: cls.teacherName },
+      order: { createdAt: 'DESC' },
+      take: 4,
+    });
+    const posts = await this.postRepo.find({
+      order: { createdAt: 'DESC' },
+      take: 4,
+    });
+    return { ...cls, members: memberDetails, courses, posts };
   }
 
   async create(data: Partial<ClassEntity>) {

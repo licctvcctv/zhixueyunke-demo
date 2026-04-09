@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../config/api.dart';
 import '../models/class_model.dart';
+import '../models/course.dart';
+import '../models/post.dart';
 import '../services/api_service.dart';
 
 class ClassDetailPage extends StatefulWidget {
@@ -208,45 +210,61 @@ class _ClassDetailPageState extends State<ClassDetailPage>
       itemCount: _courses.length,
       itemBuilder: (context, index) {
         final course = _courses[index];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4A90D9).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
+        return GestureDetector(
+          onTap: () {
+            final c = Course(
+              id: course['id']?.toString() ?? '',
+              title: course['title'] ?? '',
+              description: course['description'] ?? '',
+              teacherName: course['teacherName'] ?? course['teacher'] ?? '',
+              category: course['category'] ?? '',
+              rating: (course['rating'] ?? 4.5).toDouble(),
+              studentCount: course['studentCount'] ?? 0,
+              coverImage: '',
+              lessons: [],
+            );
+            Navigator.pushNamed(context, '/courseDetail', arguments: c);
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4A90D9).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.menu_book,
+                      color: Color(0xFF4A90D9), size: 22),
                 ),
-                child: const Icon(Icons.menu_book,
-                    color: Color(0xFF4A90D9), size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      course['title'] ?? '',
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${course['teacherName'] ?? course['teacher'] ?? ''}  |  ${course['studentCount'] ?? course['count'] ?? 0}人已学',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                    ),
-                  ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        course['title'] ?? '',
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${course['teacherName'] ?? course['teacher'] ?? ''}  |  ${course['studentCount'] ?? course['count'] ?? 0}人已学',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Icon(Icons.chevron_right, color: Colors.grey[300], size: 20),
-            ],
+                Icon(Icons.chevron_right, color: Colors.grey[300], size: 20),
+              ],
+            ),
           ),
         );
       },
@@ -264,45 +282,59 @@ class _ClassDetailPageState extends State<ClassDetailPage>
       itemCount: _posts.length,
       itemBuilder: (context, index) {
         final post = _posts[index];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.campaign,
-                      size: 18, color: Color(0xFFFF6B6B)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      post['title'] ?? '',
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w600),
+        return GestureDetector(
+          onTap: () {
+            final p = Post(
+              id: post['id']?.toString() ?? '',
+              author: post['authorName'] ?? post['author'] ?? '匿名',
+              content: post['content'] ?? '',
+              imageUrl: post['imageUrl'] ?? '',
+              likes: post['likes'] ?? 0,
+              commentsCount: post['commentCount'] ?? post['commentsCount'] ?? 0,
+              createdAt: post['createdAt'] ?? '',
+            );
+            Navigator.pushNamed(context, '/postDetail', arguments: p);
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.campaign,
+                        size: 18, color: Color(0xFFFF6B6B)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        post['title'] ?? '',
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                post['content'] ?? '',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey[600],
-                  height: 1.5,
+                  ],
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                post['createdAt'] ?? post['date'] ?? '',
-                style: TextStyle(fontSize: 11, color: Colors.grey[400]),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  post['content'] ?? '',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  post['createdAt'] ?? post['date'] ?? '',
+                  style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                ),
+              ],
+            ),
           ),
         );
       },

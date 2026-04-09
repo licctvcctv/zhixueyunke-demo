@@ -1,10 +1,10 @@
 <template>
   <div>
     <div class="page-header">
-      <h2>用户管理</h2>
+      <h2>问答管理</h2>
       <el-input
         v-model="search"
-        placeholder="搜索用户..."
+        placeholder="搜索问答..."
         prefix-icon="Search"
         style="width: 260px"
         clearable
@@ -13,20 +13,15 @@
     </div>
 
     <el-card>
-      <el-table :data="users" stripe v-loading="loading">
-        <el-table-column prop="name" label="姓名" width="120" />
-        <el-table-column prop="email" label="邮箱" min-width="180" />
-        <el-table-column prop="role" label="角色" width="100">
+      <el-table :data="questions" stripe v-loading="loading">
+        <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="authorName" label="提问者" width="120" />
+        <el-table-column prop="courseId" label="课程ID" width="100" />
+        <el-table-column prop="answerCount" label="回答数" width="100" />
+        <el-table-column prop="solved" label="是否解决" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.role === 'admin' ? 'danger' : 'primary'" size="small">
-              {{ row.role === 'admin' ? '管理员' : '用户' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 'active' ? 'success' : 'info'" size="small">
-              {{ row.status === 'active' ? '正常' : '已禁用' }}
+            <el-tag :type="row.solved === 1 ? 'success' : 'info'" size="small">
+              {{ row.solved === 1 ? '已解决' : '未解决' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -35,25 +30,15 @@
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }">
             <el-button
-              v-if="row.status === 'active'"
-              type="warning"
+              type="danger"
               size="small"
               plain
-              @click="toggleStatus(row)"
+              @click="handleDelete(row)"
             >
-              禁用
-            </el-button>
-            <el-button
-              v-else
-              type="success"
-              size="small"
-              plain
-              @click="toggleStatus(row)"
-            >
-              启用
+              删除
             </el-button>
           </template>
         </el-table-column>
@@ -66,8 +51,8 @@
           :total="total"
           :page-sizes="[10, 20, 50]"
           layout="total, sizes, prev, pager, next"
-          @size-change="fetchUsers"
-          @current-change="fetchUsers"
+          @size-change="fetchQuestions"
+          @current-change="fetchQuestions"
         />
       </div>
     </el-card>
@@ -80,7 +65,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../api'
 import { formatDate } from '../utils/format'
 
-const users = ref([])
+const questions = ref([])
 const loading = ref(false)
 const search = ref('')
 const page = ref(1)
@@ -93,43 +78,43 @@ function handleSearch() {
   clearTimeout(searchTimer)
   searchTimer = setTimeout(() => {
     page.value = 1
-    fetchUsers()
+    fetchQuestions()
   }, 300)
 }
 
-async function fetchUsers() {
+async function fetchQuestions() {
   loading.value = true
   try {
-    const res = await api.get('/users', {
+    const res = await api.get('/questions', {
       params: { page: page.value, pageSize: pageSize.value, search: search.value }
     })
-    users.value = res.data.list || res.data.users || []
+    questions.value = res.data.list || []
     total.value = res.data.total || 0
   } catch (err) {
-    console.error('获取用户列表失败', err)
+    console.error('获取问答列表失败', err)
   } finally {
     loading.value = false
   }
 }
 
-async function toggleStatus(row) {
-  const action = row.status === 'active' ? '禁用' : '启用'
+async function handleDelete(row) {
   try {
-    await ElMessageBox.confirm(`确定要${action}用户 "${row.name}" 吗？`, '提示', {
-      type: 'warning'
+    await ElMessageBox.confirm(`确定要删除问题 "${row.title}" 吗？此操作不可撤销。`, '警告', {
+      type: 'warning',
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消'
     })
-    const newStatus = row.status === 'active' ? 'disabled' : 'active'
-    await api.put(`/users/${row.id}/status`, { status: newStatus })
-    ElMessage.success(`${action}成功`)
-    fetchUsers()
+    await api.delete(`/questions/${row.id}`)
+    ElMessage.success('删除成功')
+    fetchQuestions()
   } catch (err) {
     if (err !== 'cancel') {
-      ElMessage.error(`${action}失败`)
+      ElMessage.error('删除失败')
     }
   }
 }
 
-onMounted(fetchUsers)
+onMounted(fetchQuestions)
 </script>
 
 <style scoped>

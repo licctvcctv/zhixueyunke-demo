@@ -39,11 +39,13 @@ class _AskQuestionPageState extends State<AskQuestionPage> {
             child: TextButton(
               onPressed: () {
                 if (_titleController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).clearSnackBars();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('请输入问题标题')),
                   );
                   return;
                 }
+                ScaffoldMessenger.of(context).clearSnackBars();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('提问成功')),
                 );
