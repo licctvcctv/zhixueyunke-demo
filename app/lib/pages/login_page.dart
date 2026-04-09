@@ -44,7 +44,7 @@ class _LoginPageState extends State<LoginPage> {
       Navigator.pushReplacementNamed(context, '/main');
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('登录失败，请重试')),
+        const SnackBar(content: Text('登录失败，请检查邮箱和密码')),
       );
     }
   }

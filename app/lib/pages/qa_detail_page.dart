@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../config/api.dart';
 import '../models/question.dart';
 import '../models/answer.dart';
+import '../services/api_service.dart';
 
 class QaDetailPage extends StatefulWidget {
   final QuestionModel question;
@@ -13,32 +15,15 @@ class QaDetailPage extends StatefulWidget {
 
 class _QaDetailPageState extends State<QaDetailPage> {
   final TextEditingController _answerController = TextEditingController();
+  List<AnswerModel> _answers = [];
+  bool _isLoading = true;
+  bool _isSending = false;
 
-  List<AnswerModel> get _mockAnswers => [
-        AnswerModel(
-          id: 1,
-          authorName: '李教授',
-          content:
-              '这是一个很好的问题。简单来说，StatelessWidget是不可变的，一旦创建就不能改变其状态；而StatefulWidget可以在其生命周期内改变状态。当你的UI需要响应用户交互或数据变化时，应该使用StatefulWidget。',
-          isAccepted: true,
-          createdAt: DateTime(2024, 3, 15, 10, 30),
-        ),
-        AnswerModel(
-          id: 2,
-          authorName: '王同学',
-          content:
-              '补充一下，StatelessWidget适合用于纯展示性的组件，比如文本、图标等。StatefulWidget适合用于表单输入、动画、需要网络请求的页面等场景。',
-          isAccepted: false,
-          createdAt: DateTime(2024, 3, 15, 11, 20),
-        ),
-        AnswerModel(
-          id: 3,
-          authorName: '赵同学',
-          content: '我的理解是：如果你的Widget不需要在创建后做任何改变，用StatelessWidget；如果需要根据用户操作或数据刷新UI，就用StatefulWidget。',
-          isAccepted: false,
-          createdAt: DateTime(2024, 3, 15, 14, 0),
-        ),
-      ];
+  @override
+  void initState() {
+    super.initState();
+    _fetchDetail();
+  }
 
   @override
   void dispose() {
@@ -46,10 +31,64 @@ class _QaDetailPageState extends State<QaDetailPage> {
     super.dispose();
   }
 
+  Future<void> _fetchDetail() async {
+    try {
+      final response =
+          await ApiService().get('${Api.qa}/${widget.question.id}');
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data['answers'] != null) {
+          setState(() {
+            _answers = (data['answers'] as List)
+                .map((a) => AnswerModel.fromJson(a))
+                .toList();
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('获取问题详情失败: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _submitAnswer() async {
+    if (_answerController.text.trim().isEmpty) return;
+    setState(() => _isSending = true);
+    try {
+      final response = await ApiService().post(
+        '${Api.qa}/${widget.question.id}/answers',
+        data: {'content': _answerController.text.trim()},
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        _answerController.clear();
+        FocusScope.of(context).unfocus();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('回答已提交')),
+          );
+        }
+        await _fetchDetail();
+      }
+    } catch (e) {
+      debugPrint('提交回答失败: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('提交回答失败，请重试')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final q = widget.question;
-    final answers = _mockAnswers;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
@@ -148,7 +187,7 @@ class _QaDetailPageState extends State<QaDetailPage> {
                         horizontal: 16, vertical: 12),
                     color: Colors.white,
                     child: Text(
-                      '回答 (${answers.length})',
+                      '回答 (${_answers.length})',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -156,7 +195,23 @@ class _QaDetailPageState extends State<QaDetailPage> {
                     ),
                   ),
                   const Divider(height: 1),
-                  ...answers.map((a) => _buildAnswerCard(a)),
+                  if (_isLoading)
+                    const Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (_answers.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Center(
+                        child: Text(
+                          '暂无回答，快来回答这个问题吧',
+                          style: TextStyle(color: Colors.grey[400]),
+                        ),
+                      ),
+                    )
+                  else
+                    ..._answers.map((a) => _buildAnswerCard(a)),
                   const SizedBox(height: 80),
                 ],
               ),
@@ -201,23 +256,26 @@ class _QaDetailPageState extends State<QaDetailPage> {
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
-                    onTap: () {
-                      if (_answerController.text.trim().isNotEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('回答已提交')),
-                        );
-                        _answerController.clear();
-                      }
-                    },
+                    onTap: _isSending ? null : _submitAnswer,
                     child: Container(
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF4A90D9),
+                        color: _isSending
+                            ? Colors.grey
+                            : const Color(0xFF4A90D9),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child:
-                          const Icon(Icons.send, color: Colors.white, size: 18),
+                      child: _isSending
+                          ? const Padding(
+                              padding: EdgeInsets.all(10),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.send,
+                              color: Colors.white, size: 18),
                     ),
                   ),
                 ],
@@ -245,7 +303,7 @@ class _QaDetailPageState extends State<QaDetailPage> {
                     ? const Color(0xFF50C878)
                     : const Color(0xFF4A90D9),
                 child: Text(
-                  answer.authorName[0],
+                  answer.authorName.isNotEmpty ? answer.authorName[0] : '?',
                   style: const TextStyle(color: Colors.white, fontSize: 11),
                 ),
               ),

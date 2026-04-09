@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../config/api.dart';
 import '../config/colors.dart';
 import '../models/post.dart';
 import '../models/comment.dart';
+import '../services/api_service.dart';
 
 class PostDetailPage extends StatefulWidget {
   const PostDetailPage({Key? key}) : super(key: key);
@@ -12,14 +14,19 @@ class PostDetailPage extends StatefulWidget {
 
 class _PostDetailPageState extends State<PostDetailPage> {
   final _commentController = TextEditingController();
+  List<Comment> _comments = [];
+  bool _isLoading = true;
+  bool _isSending = false;
+  Post? _post;
 
-  final List<Comment> _comments = [
-    Comment(id: '1', author: '学习者A', content: '说得太对了，我也有同样的感受！', createdAt: '1小时前'),
-    Comment(id: '2', author: '学习者B', content: '谢谢分享，收藏了！', createdAt: '2小时前'),
-    Comment(id: '3', author: '学习者C', content: '请问具体是哪个课程呢？想一起学习', createdAt: '3小时前'),
-    Comment(id: '4', author: '学习者D', content: '非常有帮助的分享，期待更多内容！', createdAt: '5小时前'),
-    Comment(id: '5', author: '学习者E', content: '已关注，互相学习进步', createdAt: '昨天'),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _post = ModalRoute.of(context)!.settings.arguments as Post;
+      _fetchPostDetail();
+    });
+  }
 
   @override
   void dispose() {
@@ -27,21 +34,58 @@ class _PostDetailPageState extends State<PostDetailPage> {
     super.dispose();
   }
 
-  void _addComment() {
+  Future<void> _fetchPostDetail() async {
+    try {
+      final response = await ApiService().get('${Api.posts}/${_post!.id}');
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data['comments'] != null) {
+          setState(() {
+            _comments = (data['comments'] as List)
+                .map((c) => Comment(
+                      id: c['id']?.toString() ?? '',
+                      author: c['authorName'] ?? c['author'] ?? '',
+                      content: c['content'] ?? '',
+                      createdAt: c['createdAt'] ?? '',
+                    ))
+                .toList();
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('获取帖子详情失败: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _addComment() async {
     if (_commentController.text.trim().isEmpty) return;
-    setState(() {
-      _comments.insert(
-        0,
-        Comment(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          author: '我',
-          content: _commentController.text.trim(),
-          createdAt: '刚刚',
-        ),
+    setState(() => _isSending = true);
+    try {
+      final response = await ApiService().post(
+        '${Api.posts}/${_post!.id}/comments',
+        data: {'content': _commentController.text.trim()},
       );
-      _commentController.clear();
-    });
-    FocusScope.of(context).unfocus();
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        _commentController.clear();
+        FocusScope.of(context).unfocus();
+        await _fetchPostDetail();
+      }
+    } catch (e) {
+      debugPrint('发送评论失败: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('发送评论失败，请重试')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
+    }
   }
 
   @override
@@ -186,71 +230,89 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   ),
 
                   // Comments list
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _comments.length,
-                    separatorBuilder: (_, __) => Divider(
-                      height: 24,
-                      color: Colors.grey[100],
-                    ),
-                    itemBuilder: (context, index) {
-                      final comment = _comments[index];
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          CircleAvatar(
-                            radius: 16,
-                            backgroundColor: AppColors.fromId(index),
-                            child: Text(
-                              comment.author[0],
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
+                  if (_isLoading)
+                    const Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (_comments.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Center(
+                        child: Text(
+                          '暂无评论，快来发表第一条评论吧',
+                          style: TextStyle(color: Colors.grey[400]),
+                        ),
+                      ),
+                    )
+                  else
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: _comments.length,
+                      separatorBuilder: (_, __) => Divider(
+                        height: 24,
+                        color: Colors.grey[100],
+                      ),
+                      itemBuilder: (context, index) {
+                        final comment = _comments[index];
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundColor: AppColors.fromId(index),
+                              child: Text(
+                                comment.author.isNotEmpty
+                                    ? comment.author[0]
+                                    : '?',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      comment.author,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13,
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        comment.author,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                        ),
                                       ),
-                                    ),
-                                    const Spacer(),
-                                    Text(
-                                      comment.createdAt,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey[400],
+                                      const Spacer(),
+                                      Text(
+                                        comment.createdAt,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey[400],
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  comment.content,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    height: 1.4,
-                                    color: Colors.grey[800],
+                                    ],
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    comment.content,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      height: 1.4,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                          ],
+                        );
+                      },
+                    ),
                   const SizedBox(height: 20),
                 ],
               ),
@@ -301,19 +363,29 @@ class _PostDetailPageState extends State<PostDetailPage> {
                 ),
                 const SizedBox(width: 8),
                 GestureDetector(
-                  onTap: _addComment,
+                  onTap: _isSending ? null : _addComment,
                   child: Container(
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF4A90D9),
+                      color: _isSending
+                          ? Colors.grey
+                          : const Color(0xFF4A90D9),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Icon(
-                      Icons.send,
-                      color: Colors.white,
-                      size: 18,
-                    ),
+                    child: _isSending
+                        ? const Padding(
+                            padding: EdgeInsets.all(10),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.send,
+                            color: Colors.white,
+                            size: 18,
+                          ),
                   ),
                 ),
               ],

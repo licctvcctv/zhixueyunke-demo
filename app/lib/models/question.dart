@@ -18,4 +18,17 @@ class QuestionModel {
     required this.solved,
     required this.createdAt,
   });
+
+  factory QuestionModel.fromJson(Map<String, dynamic> json) {
+    return QuestionModel(
+      id: json['id'] ?? 0,
+      courseId: json['courseId'] ?? 0,
+      authorName: json['authorName'] ?? '',
+      title: json['title'] ?? '',
+      content: json['content'] ?? '',
+      answerCount: json['answerCount'] ?? 0,
+      solved: (json['solved'] == 1 || json['solved'] == true),
+      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+    );
+  }
 }

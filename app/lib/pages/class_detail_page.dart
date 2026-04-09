@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../config/api.dart';
 import '../models/class_model.dart';
+import '../services/api_service.dart';
 
 class ClassDetailPage extends StatefulWidget {
   final ClassModel classModel;
@@ -14,42 +16,49 @@ class _ClassDetailPageState extends State<ClassDetailPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  final List<Map<String, String>> _mockStudents = const [
-    {'name': '张三', 'role': '班长'},
-    {'name': '李四', 'role': '学习委员'},
-    {'name': '王五', 'role': '同学'},
-    {'name': '赵六', 'role': '同学'},
-    {'name': '孙七', 'role': '同学'},
-    {'name': '周八', 'role': '同学'},
-    {'name': '吴九', 'role': '同学'},
-    {'name': '郑十', 'role': '同学'},
-    {'name': '钱十一', 'role': '同学'},
-    {'name': '陈十二', 'role': '同学'},
-  ];
-
-  final List<Map<String, String>> _mockCourses = const [
-    {'title': 'Flutter移动开发实战', 'teacher': '李教授', 'count': '2341'},
-    {'title': '数据结构与算法', 'teacher': '王老师', 'count': '1890'},
-    {'title': '计算机网络基础', 'teacher': '张老师', 'count': '1562'},
-    {'title': '操作系统原理', 'teacher': '陈教授', 'count': '1200'},
-  ];
-
-  final List<Map<String, String>> _mockPosts = const [
-    {'title': '关于期中考试安排的通知', 'date': '2024-03-15', 'content': '期中考试将于4月10日至4月14日进行，请同学们做好复习准备。'},
-    {'title': '课程实验报告提交提醒', 'date': '2024-03-12', 'content': '请各位同学在3月20日前提交第二次实验报告，逾期不予受理。'},
-    {'title': '班级春游活动报名', 'date': '2024-03-10', 'content': '本周六组织班级春游活动，有意参加的同学请在群内接龙报名。'},
-  ];
+  List<Map<String, dynamic>> _students = [];
+  List<Map<String, dynamic>> _courses = [];
+  List<Map<String, dynamic>> _posts = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _fetchClassDetail();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchClassDetail() async {
+    try {
+      final response =
+          await ApiService().get('${Api.classes}/${widget.classModel.id}');
+      if (response.statusCode == 200) {
+        final data = response.data;
+        setState(() {
+          if (data['members'] != null) {
+            _students = List<Map<String, dynamic>>.from(data['members']);
+          }
+          if (data['courses'] != null) {
+            _courses = List<Map<String, dynamic>>.from(data['courses']);
+          }
+          if (data['posts'] != null) {
+            _posts = List<Map<String, dynamic>>.from(data['posts']);
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('获取班级详情失败: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -120,14 +129,16 @@ class _ClassDetailPageState extends State<ClassDetailPage>
           ),
           // Tab content
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildMembersTab(),
-                _buildCoursesTab(),
-                _buildPostsTab(),
-              ],
-            ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildMembersTab(),
+                      _buildCoursesTab(),
+                      _buildPostsTab(),
+                    ],
+                  ),
           ),
         ],
       ),
@@ -135,12 +146,19 @@ class _ClassDetailPageState extends State<ClassDetailPage>
   }
 
   Widget _buildMembersTab() {
+    if (_students.isEmpty) {
+      return Center(
+        child: Text('暂无成员数据', style: TextStyle(color: Colors.grey[400])),
+      );
+    }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemCount: _mockStudents.length,
+      itemCount: _students.length,
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
-        final student = _mockStudents[index];
+        final student = _students[index];
+        final name = student['name'] ?? student['userName'] ?? '未知';
+        final role = student['role'] ?? '同学';
         final colors = [
           const Color(0xFF4A90D9),
           const Color(0xFF50C878),
@@ -152,12 +170,12 @@ class _ClassDetailPageState extends State<ClassDetailPage>
           leading: CircleAvatar(
             backgroundColor: colors[index % colors.length],
             child: Text(
-              student['name']![0],
+              name.toString().isNotEmpty ? name.toString()[0] : '?',
               style: const TextStyle(color: Colors.white, fontSize: 14),
             ),
           ),
-          title: Text(student['name']!, style: const TextStyle(fontSize: 14)),
-          trailing: student['role'] != '同学'
+          title: Text(name.toString(), style: const TextStyle(fontSize: 14)),
+          trailing: role != '同学'
               ? Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -166,7 +184,7 @@ class _ClassDetailPageState extends State<ClassDetailPage>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    student['role']!,
+                    role.toString(),
                     style: const TextStyle(
                       fontSize: 11,
                       color: Color(0xFF4A90D9),
@@ -180,11 +198,16 @@ class _ClassDetailPageState extends State<ClassDetailPage>
   }
 
   Widget _buildCoursesTab() {
+    if (_courses.isEmpty) {
+      return Center(
+        child: Text('暂无课程数据', style: TextStyle(color: Colors.grey[400])),
+      );
+    }
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _mockCourses.length,
+      itemCount: _courses.length,
       itemBuilder: (context, index) {
-        final course = _mockCourses[index];
+        final course = _courses[index];
         return Container(
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(14),
@@ -210,13 +233,13 @@ class _ClassDetailPageState extends State<ClassDetailPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      course['title']!,
+                      course['title'] ?? '',
                       style: const TextStyle(
                           fontSize: 14, fontWeight: FontWeight.w500),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${course['teacher']}  |  ${course['count']}人已学',
+                      '${course['teacherName'] ?? course['teacher'] ?? ''}  |  ${course['studentCount'] ?? course['count'] ?? 0}人已学',
                       style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                     ),
                   ],
@@ -231,11 +254,16 @@ class _ClassDetailPageState extends State<ClassDetailPage>
   }
 
   Widget _buildPostsTab() {
+    if (_posts.isEmpty) {
+      return Center(
+        child: Text('暂无动态数据', style: TextStyle(color: Colors.grey[400])),
+      );
+    }
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _mockPosts.length,
+      itemCount: _posts.length,
       itemBuilder: (context, index) {
-        final post = _mockPosts[index];
+        final post = _posts[index];
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(14),
@@ -253,7 +281,7 @@ class _ClassDetailPageState extends State<ClassDetailPage>
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      post['title']!,
+                      post['title'] ?? '',
                       style: const TextStyle(
                           fontSize: 14, fontWeight: FontWeight.w600),
                     ),
@@ -262,7 +290,7 @@ class _ClassDetailPageState extends State<ClassDetailPage>
               ),
               const SizedBox(height: 8),
               Text(
-                post['content']!,
+                post['content'] ?? '',
                 style: TextStyle(
                   fontSize: 13,
                   color: Colors.grey[600],
@@ -271,7 +299,7 @@ class _ClassDetailPageState extends State<ClassDetailPage>
               ),
               const SizedBox(height: 8),
               Text(
-                post['date']!,
+                post['createdAt'] ?? post['date'] ?? '',
                 style: TextStyle(fontSize: 11, color: Colors.grey[400]),
               ),
             ],

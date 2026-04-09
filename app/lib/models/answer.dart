@@ -12,4 +12,14 @@ class AnswerModel {
     required this.isAccepted,
     required this.createdAt,
   });
+
+  factory AnswerModel.fromJson(Map<String, dynamic> json) {
+    return AnswerModel(
+      id: json['id'] ?? 0,
+      authorName: json['authorName'] ?? '',
+      content: json['content'] ?? '',
+      isAccepted: json['isAccepted'] ?? false,
+      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+    );
+  }
 }

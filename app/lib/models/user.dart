@@ -4,6 +4,9 @@ class User {
   final String email;
   final String avatar;
   final String bio;
+  final String role;
+  final int status;
+  final String createdAt;
 
   User({
     required this.id,
@@ -11,6 +14,9 @@ class User {
     required this.email,
     this.avatar = '',
     this.bio = '',
+    this.role = 'user',
+    this.status = 1,
+    this.createdAt = '',
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -20,6 +26,9 @@ class User {
       email: json['email'] ?? '',
       avatar: json['avatar'] ?? '',
       bio: json['bio'] ?? '',
+      role: json['role'] ?? 'user',
+      status: json['status'] ?? 1,
+      createdAt: json['createdAt'] ?? '',
     );
   }
 
@@ -30,6 +39,9 @@ class User {
       'email': email,
       'avatar': avatar,
       'bio': bio,
+      'role': role,
+      'status': status,
+      'createdAt': createdAt,
     };
   }
 }

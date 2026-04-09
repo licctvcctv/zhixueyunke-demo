@@ -13,24 +13,35 @@ class AuthService extends ChangeNotifier {
   bool get isLoggedIn => _isLoggedIn;
   String? get token => _token;
 
-  // Mock user for demo
-  static final User _mockUser = User(
-    id: '1',
-    name: '张三',
-    email: 'zhangsan@example.com',
-    avatar: '',
-    bio: '热爱学习，追求卓越',
-  );
-
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString('token');
     if (_token != null) {
-      _isLoggedIn = true;
-      _currentUser = _mockUser;
       ApiService().setToken(_token!);
+      final success = await _fetchProfile();
+      if (success) {
+        _isLoggedIn = true;
+      } else {
+        // Token invalid, clear it
+        _token = null;
+        await prefs.remove('token');
+        ApiService().clearToken();
+      }
       notifyListeners();
     }
+  }
+
+  Future<bool> _fetchProfile() async {
+    try {
+      final response = await ApiService().get(Api.profile);
+      if (response.statusCode == 200) {
+        _currentUser = User.fromJson(response.data);
+        return true;
+      }
+    } catch (e) {
+      debugPrint('获取用户信息失败: $e');
+    }
+    return false;
   }
 
   Future<bool> login(String email, String password) async {
@@ -39,29 +50,25 @@ class AuthService extends ChangeNotifier {
         'email': email,
         'password': password,
       });
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         _token = response.data['token'];
-        _currentUser = User.fromJson(response.data['user']);
+        ApiService().setToken(_token!);
+        // Try to get user from login response, otherwise fetch profile
+        if (response.data['user'] != null) {
+          _currentUser = User.fromJson(response.data['user']);
+        } else {
+          await _fetchProfile();
+        }
         _isLoggedIn = true;
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', _token!);
-        ApiService().setToken(_token!);
         notifyListeners();
         return true;
       }
     } catch (e) {
-      // Server unreachable, use mock data for demo
-      debugPrint('服务器无法连接，使用模拟数据: $e');
+      debugPrint('登录失败: $e');
     }
-
-    // Mock login for demo
-    _token = 'mock_token_123';
-    _currentUser = _mockUser;
-    _isLoggedIn = true;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('token', _token!);
-    notifyListeners();
-    return true;
+    return false;
   }
 
   Future<bool> register(String name, String email, String password) async {
@@ -75,23 +82,9 @@ class AuthService extends ChangeNotifier {
         return await login(email, password);
       }
     } catch (e) {
-      debugPrint('服务器无法连接，使用模拟数据: $e');
+      debugPrint('注册失败: $e');
     }
-
-    // Mock register for demo
-    _token = 'mock_token_123';
-    _currentUser = User(
-      id: '2',
-      name: name,
-      email: email,
-      avatar: '',
-      bio: '',
-    );
-    _isLoggedIn = true;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('token', _token!);
-    notifyListeners();
-    return true;
+    return false;
   }
 
   Future<void> logout() async {

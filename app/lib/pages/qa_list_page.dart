@@ -1,115 +1,78 @@
 import 'package:flutter/material.dart';
 import '../models/question.dart';
+import '../services/api_service.dart';
+import '../config/api.dart';
 import 'qa_detail_page.dart';
 import 'ask_question_page.dart';
 
-class QaListPage extends StatelessWidget {
+class QaListPage extends StatefulWidget {
   const QaListPage({Key? key}) : super(key: key);
 
-  List<QuestionModel> get _mockQuestions => [
-        QuestionModel(
-          id: 1,
-          courseId: 1,
-          authorName: '张同学',
-          title: 'Flutter中StatelessWidget和StatefulWidget的区别是什么？',
-          content: '刚开始学Flutter，想了解这两种Widget的区别以及使用场景。',
-          answerCount: 5,
-          solved: true,
-          createdAt: DateTime(2024, 3, 15),
-        ),
-        QuestionModel(
-          id: 2,
-          courseId: 1,
-          authorName: '李同学',
-          title: 'Dart中async和await的使用方法？',
-          content: '异步编程一直是我的弱项，请问Dart中如何正确使用async/await？',
-          answerCount: 3,
-          solved: true,
-          createdAt: DateTime(2024, 3, 14),
-        ),
-        QuestionModel(
-          id: 3,
-          courseId: 2,
-          authorName: '王同学',
-          title: '高等数学中极限的求解技巧有哪些？',
-          content: '求不定式极限时经常出错，有什么好的方法和技巧吗？',
-          answerCount: 8,
-          solved: true,
-          createdAt: DateTime(2024, 3, 13),
-        ),
-        QuestionModel(
-          id: 4,
-          courseId: 3,
-          authorName: '赵同学',
-          title: '英语四级听力如何有效提升？',
-          content: '听力分数一直不理想，有没有推荐的练习方法？',
-          answerCount: 6,
-          solved: false,
-          createdAt: DateTime(2024, 3, 12),
-        ),
-        QuestionModel(
-          id: 5,
-          courseId: 1,
-          authorName: '孙同学',
-          title: 'Flutter中如何实现页面间传参？',
-          content: '我想在A页面跳转到B页面时传递一些数据，有哪些方式？',
-          answerCount: 4,
-          solved: true,
-          createdAt: DateTime(2024, 3, 11),
-        ),
-        QuestionModel(
-          id: 6,
-          courseId: 4,
-          authorName: '周同学',
-          title: 'Python中列表推导式和生成器表达式有什么区别？',
-          content: '两者语法相似，但在性能和使用场景上有什么不同？',
-          answerCount: 2,
-          solved: false,
-          createdAt: DateTime(2024, 3, 10),
-        ),
-        QuestionModel(
-          id: 7,
-          courseId: 2,
-          authorName: '钱同学',
-          title: '微积分中泰勒展开式的应用场景？',
-          content: '学了泰勒展开，但不清楚在哪些实际问题中会用到？',
-          answerCount: 3,
-          solved: false,
-          createdAt: DateTime(2024, 3, 9),
-        ),
-        QuestionModel(
-          id: 8,
-          courseId: 5,
-          authorName: '陈同学',
-          title: 'Figma中Auto Layout怎么使用？',
-          content: '自动布局功能总是调不好，求一个详细教程。',
-          answerCount: 1,
-          solved: false,
-          createdAt: DateTime(2024, 3, 8),
-        ),
-      ];
+  @override
+  State<QaListPage> createState() => _QaListPageState();
+}
+
+class _QaListPageState extends State<QaListPage> {
+  List<QuestionModel> _questions = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      setState(() { _loading = true; _error = null; });
+      final response = await ApiService().get(Api.qa);
+      final list = (response.data as List)
+          .map((e) => QuestionModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      setState(() { _questions = list; _loading = false; });
+    } catch (e) {
+      setState(() { _error = '加载失败，请检查网络'; _loading = false; });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final questions = _mockQuestions;
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
       appBar: AppBar(title: const Text('课程问答')),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: questions.length,
-        itemBuilder: (context, index) {
-          final q = questions[index];
-          return _buildQuestionCard(context, q);
-        },
-      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_error!, style: const TextStyle(color: Colors.grey)),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _loadData,
+                        child: const Text('重试'),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _questions.length,
+                  itemBuilder: (context, index) {
+                    final q = _questions[index];
+                    return _buildQuestionCard(context, q);
+                  },
+                ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF4A90D9),
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const AskQuestionPage()),
           );
+          _loadData();
         },
         child: const Icon(Icons.edit, color: Colors.white),
       ),
@@ -188,7 +151,7 @@ class QaListPage extends StatelessWidget {
                   radius: 10,
                   backgroundColor: const Color(0xFF4A90D9),
                   child: Text(
-                    q.authorName[0],
+                    q.authorName.isNotEmpty ? q.authorName[0] : '?',
                     style: const TextStyle(color: Colors.white, fontSize: 9),
                   ),
                 ),

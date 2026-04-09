@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../config/api.dart';
 import '../config/colors.dart';
 import '../models/course.dart';
+import '../services/api_service.dart';
 import 'qa_list_page.dart';
 
 class CourseDetailPage extends StatefulWidget {
@@ -13,11 +15,20 @@ class CourseDetailPage extends StatefulWidget {
 class _CourseDetailPageState extends State<CourseDetailPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  Course? _fullCourse;
+  List<Map<String, dynamic>> _reviews = [];
+  bool _isLoadingCourse = true;
+  bool _isLoadingReviews = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final course = ModalRoute.of(context)!.settings.arguments as Course;
+      _fetchCourseDetail(course.id);
+      _fetchReviews(course.id);
+    });
   }
 
   @override
@@ -26,11 +37,50 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     super.dispose();
   }
 
+  Future<void> _fetchCourseDetail(String courseId) async {
+    try {
+      final response = await ApiService().get('${Api.courses}/$courseId');
+      if (response.statusCode == 200) {
+        setState(() {
+          _fullCourse = Course.fromJson(response.data);
+        });
+      }
+    } catch (e) {
+      debugPrint('获取课程详情失败: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingCourse = false);
+      }
+    }
+  }
+
+  Future<void> _fetchReviews(String courseId) async {
+    try {
+      final response =
+          await ApiService().get('${Api.courses}/$courseId/comments');
+      if (response.statusCode == 200) {
+        final data = response.data;
+        final list = data is List ? data : (data['comments'] ?? data['data'] ?? []);
+        setState(() {
+          _reviews = List<Map<String, dynamic>>.from(list);
+        });
+      }
+    } catch (e) {
+      debugPrint('获取课程评价失败: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingReviews = false);
+      }
+    }
+  }
+
   Color _getCoverColor(String id) => AppColors.fromId(id);
 
   @override
   Widget build(BuildContext context) {
     final course = ModalRoute.of(context)!.settings.arguments as Course;
+    // Use full course data if loaded, otherwise use the passed-in course
+    final displayCourse = _fullCourse ?? course;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -68,7 +118,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                course.title,
+                                displayCourse.title,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 20,
@@ -88,7 +138,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            course.title,
+                            displayCourse.title,
                             style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -101,7 +151,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                 radius: 14,
                                 backgroundColor: const Color(0xFF4A90D9),
                                 child: Text(
-                                  course.teacherName[0],
+                                  displayCourse.teacherName[0],
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 12,
@@ -110,7 +160,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                course.teacherName,
+                                displayCourse.teacherName,
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Colors.grey[700],
@@ -121,7 +171,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                   size: 16, color: Colors.amber[600]),
                               const SizedBox(width: 4),
                               Text(
-                                course.rating.toStringAsFixed(1),
+                                displayCourse.rating.toStringAsFixed(1),
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
@@ -132,7 +182,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                   size: 16, color: Colors.grey[400]),
                               const SizedBox(width: 4),
                               Text(
-                                '${course.studentCount}人已学',
+                                '${displayCourse.studentCount}人已学',
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: Colors.grey[500],
@@ -151,7 +201,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              course.category,
+                              displayCourse.category,
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: Color(0xFF4A90D9),
@@ -199,7 +249,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          course.description,
+                          displayCourse.description,
                           style: TextStyle(
                             fontSize: 14,
                             height: 1.8,
@@ -228,7 +278,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                           ),
                         ),
                         const SizedBox(height: 12),
-                        _buildLearnItem('对${course.category}感兴趣的学生'),
+                        _buildLearnItem('对${displayCourse.category}感兴趣的学生'),
                         _buildLearnItem('希望系统学习提升技能的从业者'),
                         _buildLearnItem('准备相关考试的备考人员'),
                       ],
@@ -236,82 +286,101 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                   ),
 
                   // Lessons tab
-                  ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: course.lessons.length,
-                    itemBuilder: (context, index) {
-                      final lesson = course.lessons[index];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: ListTile(
-                          leading: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF4A90D9).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Center(
+                  _isLoadingCourse
+                      ? const Center(child: CircularProgressIndicator())
+                      : displayCourse.lessons.isEmpty
+                          ? Center(
                               child: Text(
-                                '${lesson.order}',
-                                style: const TextStyle(
-                                  color: Color(0xFF4A90D9),
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                '暂无课时',
+                                style: TextStyle(color: Colors.grey[400]),
                               ),
-                            ),
-                          ),
-                          title: Text(
-                            lesson.title,
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          subtitle: Text(
-                            lesson.duration,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[400],
-                            ),
-                          ),
-                          trailing: Icon(
-                            Icons.play_circle_fill,
-                            color: const Color(0xFF4A90D9).withOpacity(0.7),
-                          ),
-                          onTap: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/videoPlayer',
-                              arguments: {
-                                'lesson': lesson,
-                                'courseTitle': course.title,
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: displayCourse.lessons.length,
+                              itemBuilder: (context, index) {
+                                final lesson = displayCourse.lessons[index];
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[50],
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: ListTile(
+                                    leading: Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF4A90D9)
+                                            .withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          '${lesson.order}',
+                                          style: const TextStyle(
+                                            color: Color(0xFF4A90D9),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    title: Text(
+                                      lesson.title,
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                    subtitle: Text(
+                                      lesson.duration,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[400],
+                                      ),
+                                    ),
+                                    trailing: Icon(
+                                      Icons.play_circle_fill,
+                                      color: const Color(0xFF4A90D9)
+                                          .withOpacity(0.7),
+                                    ),
+                                    onTap: () {
+                                      Navigator.pushNamed(
+                                        context,
+                                        '/videoPlayer',
+                                        arguments: {
+                                          'lesson': lesson,
+                                          'courseTitle': displayCourse.title,
+                                        },
+                                      );
+                                    },
+                                  ),
+                                );
                               },
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  ),
+                            ),
 
                   // Reviews tab
-                  ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      _buildReviewCard('李同学', 5.0, '课程内容非常丰富，老师讲解清晰易懂，受益匪浅！',
-                          '2024-03-10'),
-                      _buildReviewCard(
-                          '王同学', 4.5, '整体不错，就是有些章节进度稍快，希望能增加更多练习题。',
-                          '2024-03-08'),
-                      _buildReviewCard(
-                          '张同学', 5.0, '非常好的课程，帮助我通过了考试，感谢老师！', '2024-03-05'),
-                      _buildReviewCard(
-                          '刘同学', 4.0, '内容全面，适合入门学习，期待更多进阶内容。', '2024-03-01'),
-                      _buildReviewCard(
-                          '赵同学', 4.5, '课程质量很高，实战部分特别有帮助，推荐学习。', '2024-02-28'),
-                    ],
-                  ),
+                  _isLoadingReviews
+                      ? const Center(child: CircularProgressIndicator())
+                      : _reviews.isEmpty
+                          ? Center(
+                              child: Text(
+                                '暂无评价',
+                                style: TextStyle(color: Colors.grey[400]),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: _reviews.length,
+                              itemBuilder: (context, index) {
+                                final review = _reviews[index];
+                                return _buildReviewCard(
+                                  review['authorName'] ??
+                                      review['author'] ??
+                                      '匿名',
+                                  (review['rating'] ?? 5.0).toDouble(),
+                                  review['content'] ?? '',
+                                  review['createdAt'] ?? '',
+                                );
+                              },
+                            ),
                 ],
               ),
             ),
@@ -342,11 +411,13 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.question_answer, color: Colors.grey[600], size: 22),
+                      Icon(Icons.question_answer,
+                          color: Colors.grey[600], size: 22),
                       const SizedBox(height: 2),
                       Text(
                         '问答',
-                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                        style:
+                            TextStyle(fontSize: 11, color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -357,13 +428,14 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                     height: 48,
                     child: ElevatedButton(
                       onPressed: () {
-                        if (course.lessons.isNotEmpty) {
+                        final c = _fullCourse ?? course;
+                        if (c.lessons.isNotEmpty) {
                           Navigator.pushNamed(
                             context,
                             '/videoPlayer',
                             arguments: {
-                              'lesson': course.lessons[0],
-                              'courseTitle': course.title,
+                              'lesson': c.lessons[0],
+                              'courseTitle': c.title,
                             },
                           );
                         }
@@ -429,7 +501,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                 radius: 16,
                 backgroundColor: const Color(0xFF4A90D9),
                 child: Text(
-                  name[0],
+                  name.isNotEmpty ? name[0] : '?',
                   style: const TextStyle(color: Colors.white, fontSize: 12),
                 ),
               ),

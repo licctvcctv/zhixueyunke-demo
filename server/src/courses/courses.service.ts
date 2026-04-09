@@ -1,9 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Course } from '../entities/course.entity';
 import { Lesson } from '../entities/lesson.entity';
 import { Comment } from '../entities/comment.entity';
+import { Enrollment } from '../entities/enrollment.entity';
+import { Progress } from '../entities/progress.entity';
 
 @Injectable()
 export class CoursesService {
@@ -11,6 +13,8 @@ export class CoursesService {
     @InjectRepository(Course) private courseRepo: Repository<Course>,
     @InjectRepository(Lesson) private lessonRepo: Repository<Lesson>,
     @InjectRepository(Comment) private commentRepo: Repository<Comment>,
+    @InjectRepository(Enrollment) private enrollmentRepo: Repository<Enrollment>,
+    @InjectRepository(Progress) private progressRepo: Repository<Progress>,
   ) {}
 
   async findAll(category?: string) {
@@ -61,5 +65,54 @@ export class CoursesService {
       content,
     });
     return this.commentRepo.save(comment);
+  }
+
+  // ===== Enrollment =====
+
+  async enroll(courseId: number, userId: number) {
+    const course = await this.courseRepo.findOne({ where: { id: courseId } });
+    if (!course) throw new NotFoundException('课程不存在');
+    const existing = await this.enrollmentRepo.findOne({ where: { courseId, userId } });
+    if (existing) throw new BadRequestException('已报名该课程');
+    const enrollment = this.enrollmentRepo.create({ courseId, userId });
+    await this.enrollmentRepo.save(enrollment);
+    course.studentCount = (course.studentCount || 0) + 1;
+    await this.courseRepo.save(course);
+    return enrollment;
+  }
+
+  async getEnrollments(userId: number) {
+    const enrollments = await this.enrollmentRepo.find({ where: { userId } });
+    const courses = [];
+    for (const e of enrollments) {
+      const course = await this.courseRepo.findOne({ where: { id: e.courseId } });
+      if (course) courses.push(course);
+    }
+    return courses;
+  }
+
+  async isEnrolled(courseId: number, userId: number): Promise<boolean> {
+    const enrollment = await this.enrollmentRepo.findOne({ where: { courseId, userId } });
+    return !!enrollment;
+  }
+
+  // ===== Progress =====
+
+  async updateProgress(userId: number, courseId: number, lessonId: number) {
+    const course = await this.courseRepo.findOne({ where: { id: courseId } });
+    if (!course) throw new NotFoundException('课程不存在');
+    const lesson = await this.lessonRepo.findOne({ where: { id: lessonId, courseId } });
+    if (!lesson) throw new NotFoundException('课时不存在');
+    let progress = await this.progressRepo.findOne({ where: { userId, courseId, lessonId } });
+    if (progress) {
+      progress.completed = 1;
+      return this.progressRepo.save(progress);
+    }
+    progress = this.progressRepo.create({ userId, courseId, lessonId, completed: 1 });
+    return this.progressRepo.save(progress);
+  }
+
+  async getCourseProgress(userId: number, courseId: number) {
+    return this.progressRepo.find({ where: { userId, courseId, completed: 1 } });
   }
 }

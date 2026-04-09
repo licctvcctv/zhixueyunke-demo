@@ -19,7 +19,7 @@ class Lesson {
       title: json['title'] ?? '',
       duration: json['duration'] ?? '',
       videoUrl: json['videoUrl'] ?? '',
-      order: json['order'] ?? 0,
+      order: json['orderNum'] ?? json['order'] ?? 0,
     );
   }
 

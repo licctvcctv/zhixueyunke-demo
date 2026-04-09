@@ -14,7 +14,7 @@ class Comment {
   factory Comment.fromJson(Map<String, dynamic> json) {
     return Comment(
       id: json['id']?.toString() ?? '',
-      author: json['author'] ?? '',
+      author: json['authorName'] ?? json['author'] ?? '',
       content: json['content'] ?? '',
       createdAt: json['createdAt'] ?? '',
     );

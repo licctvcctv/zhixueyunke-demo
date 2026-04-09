@@ -1,68 +1,70 @@
 import 'package:flutter/material.dart';
 import '../config/colors.dart';
+import '../config/api.dart';
 import '../models/class_model.dart';
+import '../services/api_service.dart';
 import 'class_detail_page.dart';
 
-class ClassListPage extends StatelessWidget {
+class ClassListPage extends StatefulWidget {
   const ClassListPage({Key? key}) : super(key: key);
 
-  List<ClassModel> get _mockClasses => [
-        ClassModel(
-          id: 1,
-          name: '2024级计算机科学A班',
-          description: '计算机科学与技术专业2024级A班，主要学习编程、算法与数据结构等核心课程。',
-          teacherName: '李教授',
-          studentCount: 45,
-          createdAt: DateTime(2024, 9, 1),
-        ),
-        ClassModel(
-          id: 2,
-          name: '2024级数学B班',
-          description: '数学与应用数学专业2024级B班，涵盖高等数学、线性代数等基础课程。',
-          teacherName: '王老师',
-          studentCount: 38,
-          createdAt: DateTime(2024, 9, 1),
-        ),
-        ClassModel(
-          id: 3,
-          name: '2024级英语精读班',
-          description: '大学英语精读提高班，注重阅读与写作能力的培养。',
-          teacherName: '张老师',
-          studentCount: 52,
-          createdAt: DateTime(2024, 9, 5),
-        ),
-        ClassModel(
-          id: 4,
-          name: '2024级人工智能实验班',
-          description: '人工智能方向实验班，学习机器学习、深度学习等前沿技术。',
-          teacherName: '陈教授',
-          studentCount: 30,
-          createdAt: DateTime(2024, 9, 3),
-        ),
-        ClassModel(
-          id: 5,
-          name: '2024级UI设计研修班',
-          description: '用户界面设计研修班，学习Figma、Sketch等设计工具及设计原理。',
-          teacherName: '刘老师',
-          studentCount: 28,
-          createdAt: DateTime(2024, 9, 10),
-        ),
-      ];
+  @override
+  State<ClassListPage> createState() => _ClassListPageState();
+}
+
+class _ClassListPageState extends State<ClassListPage> {
+  List<ClassModel> _classes = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      setState(() { _loading = true; _error = null; });
+      final response = await ApiService().get(Api.classes);
+      final list = (response.data as List)
+          .map((e) => ClassModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      setState(() { _classes = list; _loading = false; });
+    } catch (e) {
+      setState(() { _error = '加载失败，请检查网络'; _loading = false; });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final classes = _mockClasses;
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
       appBar: AppBar(title: const Text('我的班级')),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: classes.length,
-        itemBuilder: (context, index) {
-          final cls = classes[index];
-          return _buildClassCard(context, cls);
-        },
-      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_error!, style: const TextStyle(color: Colors.grey)),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _loadData,
+                        child: const Text('重试'),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _classes.length,
+                  itemBuilder: (context, index) {
+                    final cls = _classes[index];
+                    return _buildClassCard(context, cls);
+                  },
+                ),
     );
   }
 

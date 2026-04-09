@@ -1,68 +1,42 @@
 import 'package:flutter/material.dart';
 import '../models/course.dart';
-import '../models/lesson.dart';
 import '../widgets/course_card.dart';
+import '../services/api_service.dart';
+import '../config/api.dart';
 import 'qa_list_page.dart';
 import 'class_list_page.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
-  List<Course> get _hotCourses => [
-        Course(
-          id: '1',
-          title: 'Flutter移动开发实战',
-          description: '从零开始学习Flutter跨平台开发',
-          teacherName: '李教授',
-          category: '编程',
-          studentCount: 2341,
-          rating: 4.9,
-          lessons: [
-            Lesson(id: '1', title: 'Flutter简介与环境搭建', duration: '15:30', order: 1),
-            Lesson(id: '2', title: 'Dart语言基础', duration: '22:10', order: 2),
-          ],
-        ),
-        Course(
-          id: '2',
-          title: '高等数学精讲',
-          description: '大学高等数学全面系统讲解',
-          teacherName: '王老师',
-          category: '数学',
-          studentCount: 3562,
-          rating: 4.8,
-          lessons: [],
-        ),
-        Course(
-          id: '3',
-          title: '大学英语四级冲刺',
-          description: '英语四级考试技巧与真题解析',
-          teacherName: '张老师',
-          category: '英语',
-          studentCount: 5120,
-          rating: 4.7,
-          lessons: [],
-        ),
-        Course(
-          id: '4',
-          title: 'Python人工智能入门',
-          description: 'Python编程与AI基础知识',
-          teacherName: '陈教授',
-          category: '编程',
-          studentCount: 1893,
-          rating: 4.9,
-          lessons: [],
-        ),
-        Course(
-          id: '5',
-          title: 'UI设计基础教程',
-          description: '界面设计原理与Figma工具使用',
-          teacherName: '刘老师',
-          category: '设计',
-          studentCount: 1245,
-          rating: 4.6,
-          lessons: [],
-        ),
-      ];
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  List<Course> _hotCourses = [];
+  bool _loadingCourses = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHotCourses();
+  }
+
+  Future<void> _loadHotCourses() async {
+    try {
+      final response = await ApiService().get(Api.courses);
+      final list = (response.data as List)
+          .map((e) => Course.fromJson(e as Map<String, dynamic>))
+          .toList();
+      setState(() {
+        _hotCourses = list.take(5).toList();
+        _loadingCourses = false;
+      });
+    } catch (e) {
+      setState(() { _loadingCourses = false; });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -180,9 +154,9 @@ class HomePage extends StatelessWidget {
               // 快捷入口 section
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
+                child: const Text(
                   '快捷入口',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -236,24 +210,28 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 12),
               SizedBox(
                 height: 200,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.only(left: 16),
-                  itemCount: _hotCourses.length,
-                  itemBuilder: (context, index) {
-                    return CourseCard(
-                      course: _hotCourses[index],
-                      isHorizontal: true,
-                      onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/courseDetail',
-                          arguments: _hotCourses[index],
-                        );
-                      },
-                    );
-                  },
-                ),
+                child: _loadingCourses
+                    ? const Center(child: CircularProgressIndicator())
+                    : _hotCourses.isEmpty
+                        ? const Center(child: Text('暂无课程'))
+                        : ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.only(left: 16),
+                            itemCount: _hotCourses.length,
+                            itemBuilder: (context, index) {
+                              return CourseCard(
+                                course: _hotCourses[index],
+                                isHorizontal: true,
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/courseDetail',
+                                    arguments: _hotCourses[index],
+                                  );
+                                },
+                              );
+                            },
+                          ),
               ),
               const SizedBox(height: 24),
 

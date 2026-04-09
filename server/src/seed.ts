@@ -11,6 +11,8 @@ import { Post } from './entities/post.entity';
 import { Comment } from './entities/comment.entity';
 import { Question } from './entities/question.entity';
 import { Answer } from './entities/answer.entity';
+import { Enrollment } from './entities/enrollment.entity';
+import { Progress } from './entities/progress.entity';
 
 const VIDEO_URL = 'https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4';
 
@@ -18,13 +20,15 @@ async function seed() {
   const ds = new DataSource({
     type: 'better-sqlite3',
     database: join(__dirname, '..', 'data.db'),
-    entities: [User, Course, Lesson, ClassEntity, ClassMember, Post, Comment, Question, Answer],
+    entities: [User, Course, Lesson, ClassEntity, ClassMember, Post, Comment, Question, Answer, Enrollment, Progress],
     synchronize: true,
   });
   await ds.initialize();
   console.log('数据库已连接');
 
   // Clear all tables
+  await ds.getRepository(Progress).clear();
+  await ds.getRepository(Enrollment).clear();
   await ds.getRepository(Answer).clear();
   await ds.getRepository(Question).clear();
   await ds.getRepository(Comment).clear();
@@ -211,6 +215,35 @@ async function seed() {
     await answerRepo.save(answerRepo.create(ad));
   }
   console.log('回答数据已创建');
+
+  // ===== Enrollments =====
+  const enrollmentRepo = ds.getRepository(Enrollment);
+  const progressRepoSeed = ds.getRepository(Progress);
+
+  // 张三报名前3门课程
+  for (let i = 0; i < 3; i++) {
+    await enrollmentRepo.save(enrollmentRepo.create({ userId: student1.id, courseId: courses[i].id }));
+  }
+  // 李四报名第3和第5门课程
+  await enrollmentRepo.save(enrollmentRepo.create({ userId: student2.id, courseId: courses[2].id }));
+  await enrollmentRepo.save(enrollmentRepo.create({ userId: student2.id, courseId: courses[4].id }));
+  console.log('报名数据已创建');
+
+  // ===== Progress =====
+  // 张三完成 Python编程入门 前2个课时
+  const pythonLessons = await ds.getRepository(Lesson).find({
+    where: { courseId: courses[0].id },
+    order: { orderNum: 'ASC' },
+  });
+  for (let i = 0; i < 2 && i < pythonLessons.length; i++) {
+    await progressRepoSeed.save(progressRepoSeed.create({
+      userId: student1.id,
+      courseId: courses[0].id,
+      lessonId: pythonLessons[i].id,
+      completed: 1,
+    }));
+  }
+  console.log('学习进度数据已创建');
 
   console.log('\n===== 种子数据创建完成 =====');
   console.log('管理员账号: admin@demo.com / admin123');

@@ -20,11 +20,11 @@ class Post {
   factory Post.fromJson(Map<String, dynamic> json) {
     return Post(
       id: json['id']?.toString() ?? '',
-      author: json['author'] ?? '',
+      author: json['authorName'] ?? json['author'] ?? '',
       content: json['content'] ?? '',
       imageUrl: json['imageUrl'] ?? '',
       likes: json['likes'] ?? 0,
-      commentsCount: json['commentsCount'] ?? 0,
+      commentsCount: json['commentCount'] ?? json['commentsCount'] ?? 0,
       createdAt: json['createdAt'] ?? '',
     );
   }
