@@ -270,7 +270,7 @@ async function handleCreate() {
   }
   createLoading.value = true
   try {
-    await baseApi.post('/classes', {
+    await api.post('/classes', {
       name: createForm.name,
       description: createForm.description,
       teacherName: createForm.teacherName

@@ -1,6 +1,12 @@
 class Api {
-  // 局域网IP，真机和模拟器都能访问
-  static String baseUrl = 'http://192.168.6.165:3000';
+  // 真机测试时改为电脑局域网IP，如 http://192.168.x.x:3000
+  // Android模拟器用 http://10.0.2.2:3000
+  // iOS模拟器用 http://localhost:3000
+  // 编译时覆盖: flutter run --dart-define=API_URL=http://x.x.x.x:3000
+  static String baseUrl = const String.fromEnvironment(
+    'API_URL',
+    defaultValue: 'http://10.0.2.2:3000',
+  );
 
   // Auth
   static const String login = '/api/auth/login';

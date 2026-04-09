@@ -1,11 +1,20 @@
 import { Controller, Post, UseInterceptors, UploadedFile, UseGuards, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AdminGuard } from '../auth/admin.guard';
 import { diskStorage } from 'multer';
-import { extname, join } from 'path';
+import { join } from 'path';
+
+const SAFE_EXT: Record<string, string> = {
+  'video/mp4': '.mp4',
+  'video/webm': '.webm',
+  'video/quicktime': '.mov',
+  'video/x-msvideo': '.avi',
+  'video/x-matroska': '.mkv',
+};
 
 @Controller('api/upload')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, AdminGuard)
 export class UploadController {
   @Post('video')
   @UseInterceptors(FileInterceptor('file', {
@@ -13,13 +22,14 @@ export class UploadController {
       destination: join(__dirname, '..', '..', 'uploads'),
       filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, `video-${uniqueSuffix}${extname(file.originalname)}`);
+        const ext = SAFE_EXT[file.mimetype] ?? '.mp4';
+        cb(null, `video-${uniqueSuffix}${ext}`);
       },
     }),
     limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
     fileFilter: (req, file, cb) => {
-      if (!file.mimetype.startsWith('video/')) {
-        cb(new BadRequestException('只能上传视频文件'), false);
+      if (!SAFE_EXT[file.mimetype]) {
+        cb(new BadRequestException('只能上传视频文件 (mp4/webm/mov/avi/mkv)'), false);
         return;
       }
       cb(null, true);

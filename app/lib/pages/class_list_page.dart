@@ -28,15 +28,18 @@ class _ClassListPageState extends State<ClassListPage> {
   Future<void> _loadData() async {
     try {
       setState(() { _loading = true; _error = null; });
-      final responses = await Future.wait([
-        ApiService().get(Api.classes),
-        ApiService().get('/api/classes/my/joined').catchError((_) => null),
-      ]);
-      final list = (responses[0].data as List)
+      final classesResponse = await ApiService().get(Api.classes);
+      dynamic joinedResponse;
+      try {
+        joinedResponse = await ApiService().get('/api/classes/my/joined');
+      } catch (_) {
+        joinedResponse = null;
+      }
+      final list = (classesResponse.data as List)
           .map((e) => ClassModel.fromJson(e as Map<String, dynamic>))
           .toList();
-      if (responses[1] != null && responses[1].data is List) {
-        final joined = (responses[1].data as List)
+      if (joinedResponse != null && joinedResponse.data is List) {
+        final joined = (joinedResponse.data as List)
             .map((e) => e is int ? e : int.tryParse(e.toString()) ?? 0)
             .toSet();
         _joinedClassIds.addAll(joined);

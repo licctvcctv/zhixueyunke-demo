@@ -82,7 +82,7 @@ async function fetchComments() {
   loading.value = true
   try {
     const res = await api.get('/comments', {
-      params: { page: page.value, pageSize: pageSize.value, search: search.value }
+      params: { skip: (page.value - 1) * pageSize.value, limit: pageSize.value, search: search.value }
     })
     comments.value = res.data.list || []
     total.value = res.data.total || 0

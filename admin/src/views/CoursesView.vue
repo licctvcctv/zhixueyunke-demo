@@ -435,7 +435,7 @@ function openLessonEdit(row) {
   lessonForm.orderNum = row.orderNum || 1
   lessonForm.duration = row.duration || 0
   lessonForm.videoUrl = row.videoUrl || ''
-  lessonForm.videoSource = row.videoUrl ? 'url' : 'url'
+  lessonForm.videoSource = row.videoUrl ? 'url' : 'upload'
   uploading.value = false
   uploadPercent.value = 0
   showLessonForm.value = true

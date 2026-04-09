@@ -7,6 +7,15 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class AdminController {
   constructor(private adminService: AdminService) {}
 
+  private parsePagination(page?: string, pageSize?: string, skip?: string, limit?: string) {
+    const p = page ? +page : undefined;
+    const ps = pageSize ? +pageSize : undefined;
+    return {
+      skip: p && ps ? (p - 1) * ps : (skip ? +skip : 0),
+      limit: ps || (limit ? +limit : 20),
+    };
+  }
+
   @Get('stats')
   getStats(@Request() req) {
     this.adminService.checkAdmin(req.user.role);
@@ -15,9 +24,10 @@ export class AdminController {
 
   // ===== 用户管理 =====
   @Get('users')
-  getUsers(@Request() req, @Query('skip') skip?: string, @Query('limit') limit?: string, @Query('search') search?: string) {
+  getUsers(@Request() req, @Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('skip') skip?: string, @Query('limit') limit?: string, @Query('search') search?: string) {
     this.adminService.checkAdmin(req.user.role);
-    return this.adminService.getUsers(skip ? +skip : 0, limit ? +limit : 20, search);
+    const pg = this.parsePagination(page, pageSize, skip, limit);
+    return this.adminService.getUsers(pg.skip, pg.limit, search);
   }
 
   @Patch('users/:id')
@@ -34,9 +44,10 @@ export class AdminController {
 
   // ===== 课程管理 =====
   @Get('courses')
-  getCourses(@Request() req, @Query('skip') skip?: string, @Query('limit') limit?: string, @Query('search') search?: string) {
+  getCourses(@Request() req, @Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('skip') skip?: string, @Query('limit') limit?: string, @Query('search') search?: string) {
     this.adminService.checkAdmin(req.user.role);
-    return this.adminService.getCourses(skip ? +skip : 0, limit ? +limit : 20, search);
+    const pg = this.parsePagination(page, pageSize, skip, limit);
+    return this.adminService.getCourses(pg.skip, pg.limit, search);
   }
 
   @Put('courses/:id')
@@ -78,9 +89,22 @@ export class AdminController {
 
   // ===== 帖子管理 =====
   @Get('posts')
-  getPosts(@Request() req, @Query('skip') skip?: string, @Query('limit') limit?: string, @Query('search') search?: string) {
+  getPosts(@Request() req, @Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('skip') skip?: string, @Query('limit') limit?: string, @Query('search') search?: string) {
     this.adminService.checkAdmin(req.user.role);
-    return this.adminService.getPosts(skip ? +skip : 0, limit ? +limit : 20, search);
+    const pg = this.parsePagination(page, pageSize, skip, limit);
+    return this.adminService.getPosts(pg.skip, pg.limit, search);
+  }
+
+  @Get('posts/:id/comments')
+  getPostComments(@Request() req, @Param('id') id: string) {
+    this.adminService.checkAdmin(req.user.role);
+    return this.adminService.getPostComments(+id);
+  }
+
+  @Delete('posts/:id/comments/:commentId')
+  deletePostComment(@Request() req, @Param('id') id: string, @Param('commentId') commentId: string) {
+    this.adminService.checkAdmin(req.user.role);
+    return this.adminService.deleteComment(+commentId);
   }
 
   @Get('posts/:id')
@@ -97,9 +121,16 @@ export class AdminController {
 
   // ===== 班级管理 =====
   @Get('classes')
-  getClasses(@Request() req, @Query('skip') skip?: string, @Query('limit') limit?: string, @Query('search') search?: string) {
+  getClasses(@Request() req, @Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('skip') skip?: string, @Query('limit') limit?: string, @Query('search') search?: string) {
     this.adminService.checkAdmin(req.user.role);
-    return this.adminService.getClasses(skip ? +skip : 0, limit ? +limit : 20, search);
+    const pg = this.parsePagination(page, pageSize, skip, limit);
+    return this.adminService.getClasses(pg.skip, pg.limit, search);
+  }
+
+  @Post('classes')
+  createClass(@Request() req, @Body() body: any) {
+    this.adminService.checkAdmin(req.user.role);
+    return this.adminService.createClass(body);
   }
 
   @Put('classes/:id')
@@ -122,9 +153,10 @@ export class AdminController {
 
   // ===== 问答管理 =====
   @Get('questions')
-  getQuestions(@Request() req, @Query('skip') skip?: string, @Query('limit') limit?: string, @Query('search') search?: string) {
+  getQuestions(@Request() req, @Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('skip') skip?: string, @Query('limit') limit?: string, @Query('search') search?: string) {
     this.adminService.checkAdmin(req.user.role);
-    return this.adminService.getQuestions(skip ? +skip : 0, limit ? +limit : 20, search);
+    const pg = this.parsePagination(page, pageSize, skip, limit);
+    return this.adminService.getQuestions(pg.skip, pg.limit, search);
   }
 
   @Delete('questions/:id')
@@ -135,9 +167,10 @@ export class AdminController {
 
   // ===== 评论管理 =====
   @Get('comments')
-  getComments(@Request() req, @Query('skip') skip?: string, @Query('limit') limit?: string, @Query('search') search?: string) {
+  getComments(@Request() req, @Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('skip') skip?: string, @Query('limit') limit?: string, @Query('search') search?: string) {
     this.adminService.checkAdmin(req.user.role);
-    return this.adminService.getComments(skip ? +skip : 0, limit ? +limit : 20, search);
+    const pg = this.parsePagination(page, pageSize, skip, limit);
+    return this.adminService.getComments(pg.skip, pg.limit, search);
   }
 
   @Delete('comments/:id')
@@ -157,5 +190,17 @@ export class AdminController {
   createTeacher(@Request() req, @Body() body: any) {
     this.adminService.checkAdmin(req.user.role);
     return this.adminService.createTeacher(body);
+  }
+
+  @Patch('teachers/:id')
+  updateTeacher(@Request() req, @Param('id') id: string, @Body() body: any) {
+    this.adminService.checkAdmin(req.user.role);
+    return this.adminService.updateUser(+id, body);
+  }
+
+  @Get('teachers/:id/courses')
+  getTeacherCourses(@Request() req, @Param('id') id: string) {
+    this.adminService.checkAdmin(req.user.role);
+    return this.adminService.getTeacherCourses(+id);
   }
 }

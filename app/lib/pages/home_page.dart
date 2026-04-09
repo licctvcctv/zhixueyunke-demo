@@ -6,6 +6,7 @@ import '../config/api.dart';
 import 'qa_list_page.dart';
 import 'class_list_page.dart';
 import 'my_courses_page.dart';
+import 'course_list_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -123,21 +124,17 @@ class _HomePageState extends State<HomePage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildQuickAccess(Icons.live_tv, '直播课', const Color(0xFFFF6B6B), onTap: () {
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('直播课功能开发中')));
+                    _buildQuickAccess(Icons.menu_book, '我的课程', const Color(0xFFFF6B6B), onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const MyCoursesPage()));
                     }),
-                    _buildQuickAccess(Icons.assignment, '题库', const Color(0xFFFFB347), onTap: () {
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('题库功能开发中')));
+                    _buildQuickAccess(Icons.question_answer, '课程问答', const Color(0xFFFFB347), onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const QaListPage()));
                     }),
-                    _buildQuickAccess(Icons.emoji_events, '排行榜', const Color(0xFF50C878), onTap: () {
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('排行榜功能开发中')));
+                    _buildQuickAccess(Icons.groups, '我的班级', const Color(0xFF50C878), onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ClassListPage()));
                     }),
-                    _buildQuickAccess(Icons.calendar_today, '课表', const Color(0xFF4A90D9), onTap: () {
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('课表功能开发中')));
+                    _buildQuickAccess(Icons.calendar_today, '全部课程', const Color(0xFF4A90D9), onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const CourseListPage()));
                     }),
                   ],
                 ),
@@ -171,8 +168,7 @@ class _HomePageState extends State<HomePage> {
                       Navigator.push(context, MaterialPageRoute(builder: (_) => const QaListPage()));
                     }),
                     _buildShortcutItem(context, Icons.history, '学习记录', const Color(0xFFFFB347), () {
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('学习记录功能开发中')));
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const MyCoursesPage()));
                     }),
                   ],
                 ),

@@ -207,6 +207,11 @@ export class AdminService {
     return { list, total };
   }
 
+  async createClass(data: { name: string; description?: string; teacherName: string }) {
+    const cls = this.classRepo.create(data);
+    return this.classRepo.save(cls);
+  }
+
   async updateClass(id: number, data: { name?: string; description?: string; teacherName?: string }) {
     const updateData: Partial<ClassEntity> = {};
     if (data.name !== undefined) updateData.name = data.name;
@@ -274,6 +279,19 @@ export class AdminService {
       ...rest,
       status: rest.status === 1 ? 'active' : 'disabled',
     }));
+  }
+
+  async getTeacherCourses(teacherId: number) {
+    const teacher = await this.userRepo.findOne({ where: { id: teacherId } });
+    if (!teacher) throw new NotFoundException('教师不存在');
+    return this.courseRepo.find({ where: { teacherName: teacher.name }, order: { createdAt: 'DESC' } });
+  }
+
+  async getPostComments(postId: number) {
+    return this.commentRepo.find({
+      where: { targetType: 'post', targetId: postId },
+      order: { createdAt: 'ASC' },
+    });
   }
 
   async createTeacher(data: { name: string; email: string; password?: string; bio?: string }) {
