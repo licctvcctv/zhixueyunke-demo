@@ -114,13 +114,6 @@ export class AdminController {
     return this.adminService.getClassDetail(+id);
   }
 
-  @Post('classes/:id/courses')
-  getClassCourses(@Request() req, @Param('id') id: string) {
-    this.adminService.checkAdmin(req.user.role);
-    // 返回该班级详情（含教师课程列表）
-    return this.adminService.getClassDetail(+id);
-  }
-
   @Delete('classes/:id')
   deleteClass(@Request() req, @Param('id') id: string) {
     this.adminService.checkAdmin(req.user.role);
@@ -138,6 +131,19 @@ export class AdminController {
   deleteQuestion(@Request() req, @Param('id') id: string) {
     this.adminService.checkAdmin(req.user.role);
     return this.adminService.deleteQuestion(+id);
+  }
+
+  // ===== 评论管理 =====
+  @Get('comments')
+  getComments(@Request() req, @Query('skip') skip?: string, @Query('limit') limit?: string, @Query('search') search?: string) {
+    this.adminService.checkAdmin(req.user.role);
+    return this.adminService.getComments(skip ? +skip : 0, limit ? +limit : 20, search);
+  }
+
+  @Delete('comments/:id')
+  deleteComment(@Request() req, @Param('id') id: string) {
+    this.adminService.checkAdmin(req.user.role);
+    return this.adminService.deleteComment(+id);
   }
 
   // ===== 教师管理 =====

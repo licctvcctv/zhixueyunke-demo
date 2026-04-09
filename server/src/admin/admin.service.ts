@@ -34,13 +34,15 @@ export class AdminService {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    const [totalUsers, totalCourses, totalPosts, totalClasses, totalQuestions, newUsersThisWeek, recentUsersRaw, recentCourses] =
+    const [totalUsers, totalCourses, totalPosts, totalClasses, totalQuestions, totalLessons, totalComments, newUsersThisWeek, recentUsersRaw, recentCourses] =
       await Promise.all([
         this.userRepo.count(),
         this.courseRepo.count(),
         this.postRepo.count(),
         this.classRepo.count(),
         this.questionRepo.count(),
+        this.lessonRepo.count(),
+        this.commentRepo.count(),
         this.userRepo.count({ where: { createdAt: MoreThanOrEqual(oneWeekAgo) } }),
         this.userRepo.find({ order: { createdAt: 'DESC' }, take: 5 }),
         this.courseRepo.find({ order: { createdAt: 'DESC' }, take: 5 }),
@@ -54,6 +56,8 @@ export class AdminService {
       totalPosts,
       totalClasses,
       totalQuestions,
+      totalLessons,
+      totalComments,
       newUsersThisWeek,
       recentUsers,
       recentCourses,
@@ -220,13 +224,19 @@ export class AdminService {
 
     // 获取成员列表
     const members = await this.classMemberRepo.find({ where: { classId: id } });
-    const memberUsers = [];
-    for (const m of members) {
-      const user = await this.userRepo.findOne({ where: { id: m.userId } });
-      if (user) {
+    let memberUsers = [];
+    if (members.length > 0) {
+      const userIds = members.map(m => m.userId);
+      const users = await this.userRepo.createQueryBuilder('u')
+        .where('u.id IN (:...ids)', { ids: userIds })
+        .getMany();
+      const userMap = new Map(users.map(u => [u.id, u]));
+      memberUsers = members.map(m => {
+        const user = userMap.get(m.userId);
+        if (!user) return null;
         const { password, ...rest } = user;
-        memberUsers.push({ ...rest, memberRole: m.role, joinedAt: m.joinedAt });
-      }
+        return { ...rest, memberRole: m.role, joinedAt: m.joinedAt };
+      }).filter(Boolean);
     }
 
     // 获取该教师名下的课程列表
@@ -254,6 +264,21 @@ export class AdminService {
   async deleteQuestion(id: number) {
     await this.answerRepo.delete({ questionId: id });
     await this.questionRepo.delete(id);
+    return { message: '已删除' };
+  }
+
+  async getComments(skip = 0, limit = 20, search?: string) {
+    const qb = this.commentRepo.createQueryBuilder('c');
+    if (search) {
+      qb.where('c.content LIKE :s OR c.authorName LIKE :s', { s: `%${search}%` });
+    }
+    qb.orderBy('c.createdAt', 'DESC').skip(skip).take(limit);
+    const [list, total] = await qb.getManyAndCount();
+    return { list, total };
+  }
+
+  async deleteComment(id: number) {
+    await this.commentRepo.delete(id);
     return { message: '已删除' };
   }
 
@@ -288,5 +313,30 @@ export class AdminService {
     const saved = await this.userRepo.save(user);
     const { password, ...rest } = saved;
     return { ...rest, status: rest.status === 1 ? 'active' : 'disabled' };
+  }
+
+  // ===== 评论管理 =====
+  async getComments(skip = 0, limit = 20, search?: string) {
+    let query = this.commentRepo.createQueryBuilder('comment');
+    if (search) {
+      query = query.where('(comment.content LIKE :s OR comment.authorName LIKE :s)', { s: `%${search}%` });
+    }
+    const [data, total] = await query.orderBy('comment.createdAt', 'DESC').skip(skip).take(limit).getManyAndCount();
+    return { list: data, total };
+  }
+
+  async deleteComment(id: number) {
+    const comment = await this.commentRepo.findOne({ where: { id } });
+    if (!comment) throw new NotFoundException('评论不存在');
+    // Decrement parent's comment count
+    if (comment.targetType === 'post') {
+      const post = await this.postRepo.findOne({ where: { id: comment.targetId } });
+      if (post && post.commentCount > 0) {
+        post.commentCount -= 1;
+        await this.postRepo.save(post);
+      }
+    }
+    await this.commentRepo.delete(id);
+    return { message: '已删除' };
   }
 }

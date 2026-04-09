@@ -79,7 +79,9 @@
           </el-select>
         </el-form-item>
         <el-form-item label="讲师" prop="teacherName">
-          <el-input v-model="courseForm.teacherName" placeholder="请输入讲师名称" />
+          <el-select v-model="courseForm.teacherName" placeholder="请选择讲师" style="width: 100%" filterable>
+            <el-option v-for="t in teachers" :key="t.id" :label="t.name" :value="t.name" />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -107,7 +109,9 @@
           </el-select>
         </el-form-item>
         <el-form-item label="讲师" prop="teacherName">
-          <el-input v-model="editForm.teacherName" placeholder="请输入讲师名称" />
+          <el-select v-model="editForm.teacherName" placeholder="请选择讲师" style="width: 100%" filterable>
+            <el-option v-for="t in teachers" :key="t.id" :label="t.name" :value="t.name" />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -169,6 +173,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { api, baseApi } from '../api'
 import { formatDate } from '../utils/format'
 
+const teachers = ref([])
 const courses = ref([])
 const loading = ref(false)
 const search = ref('')
@@ -406,7 +411,14 @@ function addNewLesson() {
   })
 }
 
-onMounted(fetchCourses)
+async function fetchTeachers() {
+  try {
+    const res = await api.get('/teachers')
+    teachers.value = res.data || []
+  } catch (e) { console.error(e) }
+}
+
+onMounted(() => { fetchCourses(); fetchTeachers() })
 </script>
 
 <style scoped>

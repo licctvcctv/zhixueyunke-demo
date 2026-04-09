@@ -2,14 +2,17 @@
   <div>
     <div class="page-header">
       <h2>班级管理</h2>
-      <el-input
-        v-model="search"
-        placeholder="搜索班级..."
-        prefix-icon="Search"
-        style="width: 260px"
-        clearable
-        @input="handleSearch"
-      />
+      <div style="display:flex;align-items:center;gap:12px">
+        <el-button type="primary" @click="showCreateDialog = true">新增班级</el-button>
+        <el-input
+          v-model="search"
+          placeholder="搜索班级..."
+          prefix-icon="Search"
+          style="width: 260px"
+          clearable
+          @input="handleSearch"
+        />
+      </div>
     </div>
 
     <el-card>
@@ -44,6 +47,27 @@
       </div>
     </el-card>
 
+    <!-- 新增班级弹窗 -->
+    <el-dialog v-model="showCreateDialog" title="新增班级" width="500px">
+      <el-form :model="createForm" :rules="editRules" ref="createFormRef" label-width="80px">
+        <el-form-item label="班级名称" prop="name">
+          <el-input v-model="createForm.name" placeholder="请输入班级名称" />
+        </el-form-item>
+        <el-form-item label="描述">
+          <el-input v-model="createForm.description" type="textarea" :rows="3" placeholder="请输入班级描述" />
+        </el-form-item>
+        <el-form-item label="教师" prop="teacherName">
+          <el-select v-model="createForm.teacherName" placeholder="请选择教师" style="width: 100%" filterable>
+            <el-option v-for="t in teachers" :key="t.id" :label="t.name" :value="t.name" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showCreateDialog = false">取消</el-button>
+        <el-button type="primary" :loading="createLoading" @click="handleCreate">确定</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 编辑班级弹窗 -->
     <el-dialog v-model="showEditDialog" title="编辑班级" width="500px">
       <el-form :model="editForm" :rules="editRules" ref="editFormRef" label-width="80px">
@@ -54,7 +78,9 @@
           <el-input v-model="editForm.description" type="textarea" :rows="3" placeholder="请输入班级描述" />
         </el-form-item>
         <el-form-item label="教师" prop="teacherName">
-          <el-input v-model="editForm.teacherName" placeholder="请输入教师名称" />
+          <el-select v-model="editForm.teacherName" placeholder="请选择教师" style="width: 100%" filterable>
+            <el-option v-for="t in teachers" :key="t.id" :label="t.name" :value="t.name" />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -103,17 +129,24 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { api } from '../api'
+import { api, baseApi } from '../api'
 import { formatDate } from '../utils/format'
 
 const roleMap = { admin: '管理员', teacher: '教师', user: '学生' }
 
+const teachers = ref([])
 const classes = ref([])
 const loading = ref(false)
 const search = ref('')
 const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+
+// 新增
+const showCreateDialog = ref(false)
+const createLoading = ref(false)
+const createFormRef = ref(null)
+const createForm = reactive({ name: '', description: '', teacherName: '' })
 
 // 编辑
 const showEditDialog = ref(false)
@@ -197,12 +230,9 @@ async function openDetail(row) {
   members.value = []
   classCourses.value = []
   try {
-    const [membersRes, coursesRes] = await Promise.all([
-      api.get(`/classes/${row.id}/members`),
-      api.get(`/classes/${row.id}/courses`)
-    ])
-    members.value = membersRes.data.list || membersRes.data || []
-    classCourses.value = coursesRes.data.list || coursesRes.data || []
+    const res = await api.get(`/classes/${row.id}/members`)
+    members.value = res.data.members || []
+    classCourses.value = res.data.courses || []
   } catch (err) {
     console.error('获取班级详情失败', err)
   } finally {
@@ -227,7 +257,36 @@ async function handleDelete(row) {
   }
 }
 
-onMounted(fetchClasses)
+async function fetchTeachers() {
+  try {
+    const res = await api.get('/teachers')
+    teachers.value = res.data || []
+  } catch (e) { console.error(e) }
+}
+
+async function handleCreate() {
+  if (createFormRef.value) {
+    try { await createFormRef.value.validate() } catch { return }
+  }
+  createLoading.value = true
+  try {
+    await baseApi.post('/classes', {
+      name: createForm.name,
+      description: createForm.description,
+      teacherName: createForm.teacherName
+    })
+    ElMessage.success('创建成功')
+    showCreateDialog.value = false
+    createForm.name = ''; createForm.description = ''; createForm.teacherName = ''
+    fetchClasses()
+  } catch (err) {
+    ElMessage.error('创建失败')
+  } finally {
+    createLoading.value = false
+  }
+}
+
+onMounted(() => { fetchClasses(); fetchTeachers() })
 </script>
 
 <style scoped>

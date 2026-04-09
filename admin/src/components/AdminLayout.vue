@@ -39,6 +39,10 @@
           <el-icon><QuestionFilled /></el-icon>
           <span>问答管理</span>
         </el-menu-item>
+        <el-menu-item index="/comments">
+          <el-icon><Comment /></el-icon>
+          <span>评论管理</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>

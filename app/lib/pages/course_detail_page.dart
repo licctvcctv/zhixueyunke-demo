@@ -89,7 +89,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
       });
       _reviewController.clear();
       FocusScope.of(context).unfocus();
-      _fetchReviews(courseId);
+      await _fetchReviews(courseId);
     } catch (e) {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
