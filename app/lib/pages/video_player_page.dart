@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
+import '../config/api.dart';
 import '../models/lesson.dart';
 import '../models/comment.dart';
 
@@ -48,7 +49,12 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     final lesson = args['lesson'] as Lesson;
     String videoUrl = lesson.videoUrl;
 
-    // 替换不可用的视频源（flutter.github.io 在部分网络环境下不可访问）
+    // 相对路径（上传的视频）拼接后端地址
+    if (videoUrl.startsWith('/uploads/')) {
+      videoUrl = '${Api.baseUrl}$videoUrl';
+    }
+
+    // 替换不可用的视频源
     if (videoUrl.isEmpty || videoUrl.contains('flutter.github.io')) {
       videoUrl = 'https://vjs.zencdn.net/v/oceans.mp4';
     }

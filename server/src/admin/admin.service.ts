@@ -267,21 +267,6 @@ export class AdminService {
     return { message: '已删除' };
   }
 
-  async getComments(skip = 0, limit = 20, search?: string) {
-    const qb = this.commentRepo.createQueryBuilder('c');
-    if (search) {
-      qb.where('c.content LIKE :s OR c.authorName LIKE :s', { s: `%${search}%` });
-    }
-    qb.orderBy('c.createdAt', 'DESC').skip(skip).take(limit);
-    const [list, total] = await qb.getManyAndCount();
-    return { list, total };
-  }
-
-  async deleteComment(id: number) {
-    await this.commentRepo.delete(id);
-    return { message: '已删除' };
-  }
-
   // ===== 教师管理 =====
   async getTeachers() {
     const teachers = await this.userRepo.find({ where: { role: 'teacher' }, order: { createdAt: 'DESC' } });

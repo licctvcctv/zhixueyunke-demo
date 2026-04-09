@@ -35,6 +35,9 @@ app/android/local.properties
 app/ios/Pods/
 app/ios/.symlinks/
 
+# Uploads
+server/uploads/
+
 # SQLite database
 server/*.db
 server/data.db

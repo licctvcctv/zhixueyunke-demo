@@ -19,6 +19,7 @@ import { ClassesModule } from './classes/classes.module';
 import { PostsModule } from './posts/posts.module';
 import { QaModule } from './qa/qa.module';
 import { AdminModule } from './admin/admin.module';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { AdminModule } from './admin/admin.module';
     PostsModule,
     QaModule,
     AdminModule,
+    UploadModule,
   ],
 })
 export class AppModule {}
