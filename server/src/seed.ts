@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { join } from 'path';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { User } from './entities/user.entity';
 import { Course } from './entities/course.entity';
 import { Lesson } from './entities/lesson.entity';
@@ -18,8 +18,9 @@ const VIDEO_URL = 'https://vjs.zencdn.net/v/oceans.mp4';
 
 async function seed() {
   const ds = new DataSource({
-    type: 'better-sqlite3',
-    database: join(__dirname, '..', 'data.db'),
+    type: 'sqljs',
+    location: join(__dirname, '..', 'data.db'),
+    autoSave: true,
     entities: [User, Course, Lesson, ClassEntity, ClassMember, Post, Comment, Question, Answer, Enrollment, Progress],
     synchronize: true,
   });

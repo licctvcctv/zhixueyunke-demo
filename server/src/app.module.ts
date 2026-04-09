@@ -24,8 +24,9 @@ import { UploadModule } from './upload/upload.module';
 @Module({
   imports: [
     TypeOrmModule.forRoot({
-      type: 'better-sqlite3',
-      database: join(__dirname, '..', 'data.db'),
+      type: 'sqljs',
+      autoSave: true,
+      location: join(__dirname, '..', 'data.db'),
       entities: [User, Course, Lesson, ClassEntity, ClassMember, Post, Comment, Question, Answer, Enrollment, Progress, Like],
       synchronize: true,
     }),
