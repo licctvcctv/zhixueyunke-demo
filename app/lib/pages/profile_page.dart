@@ -26,13 +26,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadStats() async {
     try {
-      final enrolledResponse = await ApiService().get(Api.myEnrolled);
-      dynamic joinedResponse;
-      try {
-        joinedResponse = await ApiService().get('/api/classes/my/joined');
-      } catch (_) {
-        joinedResponse = null;
-      }
+      final results = await Future.wait([
+        ApiService().get(Api.myEnrolled),
+        ApiService().get('/api/classes/my/joined').catchError((_) => null),
+      ]);
+      final enrolledResponse = results[0];
+      final joinedResponse = results[1];
       if (mounted) {
         setState(() {
           _courseCount = (enrolledResponse.data as List).length;

@@ -28,13 +28,12 @@ class _ClassListPageState extends State<ClassListPage> {
   Future<void> _loadData() async {
     try {
       setState(() { _loading = true; _error = null; });
-      final classesResponse = await ApiService().get(Api.classes);
-      dynamic joinedResponse;
-      try {
-        joinedResponse = await ApiService().get('/api/classes/my/joined');
-      } catch (_) {
-        joinedResponse = null;
-      }
+      final results = await Future.wait([
+        ApiService().get(Api.classes),
+        ApiService().get('/api/classes/my/joined').catchError((_) => null),
+      ]);
+      final classesResponse = results[0];
+      final joinedResponse = results[1];
       final list = (classesResponse.data as List)
           .map((e) => ClassModel.fromJson(e as Map<String, dynamic>))
           .toList();

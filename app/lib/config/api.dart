@@ -1,5 +1,6 @@
 class Api {
-  static String baseUrl = 'http://192.168.6.165:3000';
+  // Android模拟器用 10.0.2.2，真机改为电脑局域网IP
+  static String baseUrl = 'http://10.0.2.2:3000';
 
   // Auth
   static const String login = '/api/auth/login';
