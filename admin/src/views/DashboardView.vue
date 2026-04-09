@@ -47,6 +47,54 @@
       </el-col>
     </el-row>
 
+    <!-- 第二行统计 -->
+    <el-row :gutter="20" class="stat-row" style="margin-top: 20px">
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-icon" style="background: #9b59b6">
+            <el-icon :size="28"><OfficeBuilding /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ stats.totalClasses || 0 }}</div>
+            <div class="stat-label">总班级数</div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-icon" style="background: #1abc9c">
+            <el-icon :size="28"><QuestionFilled /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ stats.totalQuestions || 0 }}</div>
+            <div class="stat-label">总问答数</div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-icon" style="background: #e67e22">
+            <el-icon :size="28"><VideoPlay /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ stats.totalLessons || 0 }}</div>
+            <div class="stat-label">总课时数</div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-icon" style="background: #3498db">
+            <el-icon :size="28"><Comment /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ stats.totalComments || 0 }}</div>
+            <div class="stat-label">总评论数</div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <el-row :gutter="20" style="margin-top: 20px">
       <el-col :span="12">
         <el-card>

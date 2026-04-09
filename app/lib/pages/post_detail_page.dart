@@ -90,18 +90,13 @@ class _PostDetailPageState extends State<PostDetailPage> {
           await ApiService().post('${Api.posts}/${_post!.id}/like');
       if (response.statusCode == 200 || response.statusCode == 201) {
         setState(() {
-          _likes = response.data['likes'] ?? (_likes + 1);
-          _isLiked = true;
+          _likes = response.data['likes'] ?? _likes;
+          _isLiked = response.data['isLiked'] ?? !_isLiked;
         });
       }
     } catch (e) {
       debugPrint('点赞失败: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('点赞失败，请重试')),
-        );
-      }
+      // 静默处理，不弹 SnackBar
     }
   }
 
@@ -220,6 +215,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
     final post = ModalRoute.of(context)!.settings.arguments as Post;
 
     final postColorIndex = int.tryParse(post.id) ?? 0;
+    final isSelf = _currentUserId.isNotEmpty && _currentUserId == post.authorId;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -285,29 +281,30 @@ class _PostDetailPageState extends State<PostDetailPage> {
                               ],
                             ),
                             const Spacer(),
-                            OutlinedButton(
-                              onPressed: () {
-                                setState(() => _isFollowed = !_isFollowed);
-                              },
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: _isFollowed
-                                    ? Colors.grey
-                                    : const Color(0xFF4A90D9),
-                                side: BorderSide(
-                                    color: _isFollowed
-                                        ? Colors.grey
-                                        : const Color(0xFF4A90D9)),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                            if (!isSelf)
+                              OutlinedButton(
+                                onPressed: () {
+                                  setState(() => _isFollowed = !_isFollowed);
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: _isFollowed
+                                      ? Colors.grey
+                                      : const Color(0xFF4A90D9),
+                                  side: BorderSide(
+                                      color: _isFollowed
+                                          ? Colors.grey
+                                          : const Color(0xFF4A90D9)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16),
+                                  minimumSize: const Size(0, 32),
                                 ),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16),
-                                minimumSize: const Size(0, 32),
+                                child: Text(
+                                    _isFollowed ? '已关注' : '关注',
+                                    style: const TextStyle(fontSize: 13)),
                               ),
-                              child: Text(
-                                  _isFollowed ? '已关注' : '关注',
-                                  style: const TextStyle(fontSize: 13)),
-                            ),
                           ],
                         ),
                         const SizedBox(height: 16),

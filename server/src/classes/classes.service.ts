@@ -55,6 +55,11 @@ export class ClassesService {
     return { message: '加入成功' };
   }
 
+  async getJoinedClassIds(userId: number): Promise<number[]> {
+    const members = await this.memberRepo.find({ where: { userId } });
+    return members.map(m => m.classId);
+  }
+
   async getMembers(classId: number) {
     const members = await this.memberRepo.find({ where: { classId } });
     return this.enrichMembers(members);

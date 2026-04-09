@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
+import '../config/api.dart';
+import 'my_courses_page.dart';
+import 'my_favorites_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -10,6 +14,36 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  int _courseCount = 0;
+  int _classCount = 0;
+  bool _statsLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    try {
+      final responses = await Future.wait([
+        ApiService().get(Api.myEnrolled),
+        ApiService().get('/api/classes/my/joined').catchError((_) => null),
+      ]);
+      if (mounted) {
+        setState(() {
+          _courseCount = (responses[0].data as List).length;
+          if (responses[1] != null && responses[1].data is List) {
+            _classCount = (responses[1].data as List).length;
+          }
+          _statsLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _statsLoading = false);
+    }
+  }
+
   Future<void> _editProfile() async {
     final authService = Provider.of<AuthService>(context, listen: false);
     final user = authService.currentUser;
@@ -31,6 +65,12 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
     final user = authService.currentUser;
+
+    final double progressValue = _courseCount > 0
+        ? (_courseCount * 5 / (_courseCount * 5 + 10)).clamp(0.0, 1.0)
+        : 0.0;
+    final int progressPercent = (progressValue * 100).round();
+    final double learnedHours = _courseCount * 5.0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
@@ -124,24 +164,35 @@ class _ProfilePageState extends State<ProfilePage> {
                           color: Colors.white.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _buildStat('12', '已学课程'),
-                            Container(
-                              width: 1,
-                              height: 30,
-                              color: Colors.white.withOpacity(0.3),
-                            ),
-                            _buildStat('48h', '学习时长'),
-                            Container(
-                              width: 1,
-                              height: 30,
-                              color: Colors.white.withOpacity(0.3),
-                            ),
-                            _buildStat('3', '获得证书'),
-                          ],
-                        ),
+                        child: _statsLoading
+                            ? const Center(
+                                child: SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  _buildStat('$_courseCount', '已学课程'),
+                                  Container(
+                                    width: 1,
+                                    height: 30,
+                                    color: Colors.white.withOpacity(0.3),
+                                  ),
+                                  _buildStat('${_courseCount * 5}h', '学习时长'),
+                                  Container(
+                                    width: 1,
+                                    height: 30,
+                                    color: Colors.white.withOpacity(0.3),
+                                  ),
+                                  _buildStat('$_classCount', '加入班级'),
+                                ],
+                              ),
                       ),
                     ],
                   ),
@@ -183,7 +234,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
-                            value: 0.65,
+                            value: progressValue,
                             minHeight: 8,
                             backgroundColor: Colors.grey[100],
                             valueColor: const AlwaysStoppedAnimation<Color>(
@@ -192,9 +243,9 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Text(
-                        '65%',
-                        style: TextStyle(
+                      Text(
+                        '$progressPercent%',
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF4A90D9),
                         ),
@@ -203,7 +254,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '本周已学习 6.5 小时 / 目标 10 小时',
+                    '累计学习 ${learnedHours.toStringAsFixed(0)} 小时',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey[500],
@@ -232,11 +283,20 @@ class _ProfilePageState extends State<ProfilePage> {
                 children: [
                   _buildMenuItem(Icons.person_outline, '个人信息', const Color(0xFF4A90D9), _editProfile),
                   _divider(),
-                  _buildMenuItem(Icons.favorite_outline, '我的收藏', const Color(0xFFFF6B6B), () {}),
+                  _buildMenuItem(Icons.favorite_outline, '我的收藏', const Color(0xFFFF6B6B), () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const MyFavoritesPage()));
+                  }),
                   _divider(),
-                  _buildMenuItem(Icons.history, '学习记录', const Color(0xFF50C878), () {}),
+                  _buildMenuItem(Icons.history, '学习记录', const Color(0xFF50C878), () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const MyCoursesPage()));
+                  }),
                   _divider(),
-                  _buildMenuItem(Icons.notifications_outlined, '消息通知', const Color(0xFFFFB347), () {}),
+                  _buildMenuItem(Icons.notifications_outlined, '消息通知', const Color(0xFFFFB347), () {
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('暂无新消息')),
+                    );
+                  }),
                   _divider(),
                   _buildMenuItem(Icons.info_outline, '关于我们', const Color(0xFF87CEEB), () {
                     Navigator.pushNamed(context, '/about');

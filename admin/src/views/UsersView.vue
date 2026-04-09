@@ -18,8 +18,8 @@
         <el-table-column prop="email" label="邮箱" min-width="180" />
         <el-table-column prop="role" label="角色" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.role === 'admin' ? 'danger' : 'primary'" size="small">
-              {{ row.role === 'admin' ? '管理员' : '用户' }}
+            <el-tag :type="roleTagType(row.role)" size="small">
+              {{ roleMap[row.role] || row.role }}
             </el-tag>
           </template>
         </el-table-column>
@@ -35,8 +35,9 @@
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
+            <el-button type="primary" size="small" plain @click="openEdit(row)">编辑</el-button>
             <el-button
               v-if="row.status === 'active'"
               type="warning"
@@ -71,14 +72,48 @@
         />
       </div>
     </el-card>
+
+    <!-- 编辑用户弹窗 -->
+    <el-dialog v-model="showEditDialog" title="编辑用户" width="500px">
+      <el-form :model="editForm" :rules="editRules" ref="editFormRef" label-width="80px">
+        <el-form-item label="姓名" prop="name">
+          <el-input v-model="editForm.name" placeholder="请输入姓名" />
+        </el-form-item>
+        <el-form-item label="邮箱" prop="email">
+          <el-input v-model="editForm.email" placeholder="请输入邮箱" />
+        </el-form-item>
+        <el-form-item label="角色" prop="role">
+          <el-select v-model="editForm.role" placeholder="请选择角色" style="width: 100%">
+            <el-option label="管理员" value="admin" />
+            <el-option label="教师" value="teacher" />
+            <el-option label="学生" value="user" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="简介" prop="bio">
+          <el-input v-model="editForm.bio" type="textarea" :rows="3" placeholder="请输入个人简介" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showEditDialog = false">取消</el-button>
+        <el-button type="primary" :loading="editLoading" @click="handleEditSubmit">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../api'
 import { formatDate } from '../utils/format'
+
+const roleMap = { admin: '管理员', teacher: '教师', user: '学生' }
+
+function roleTagType(role) {
+  if (role === 'admin') return 'danger'
+  if (role === 'teacher') return 'warning'
+  return 'primary'
+}
 
 const users = ref([])
 const loading = ref(false)
@@ -86,6 +121,60 @@ const search = ref('')
 const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+
+// 编辑相关
+const showEditDialog = ref(false)
+const editLoading = ref(false)
+const editFormRef = ref(null)
+const editingUserId = ref(null)
+const editForm = reactive({
+  name: '',
+  email: '',
+  role: '',
+  bio: ''
+})
+const editRules = {
+  name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
+  ],
+  role: [{ required: true, message: '请选择角色', trigger: 'change' }]
+}
+
+function openEdit(row) {
+  editingUserId.value = row.id
+  editForm.name = row.name || ''
+  editForm.email = row.email || ''
+  editForm.role = row.role || 'user'
+  editForm.bio = row.bio || ''
+  showEditDialog.value = true
+}
+
+async function handleEditSubmit() {
+  if (!editFormRef.value) return
+  try {
+    await editFormRef.value.validate()
+  } catch {
+    return
+  }
+  editLoading.value = true
+  try {
+    await api.patch(`/users/${editingUserId.value}`, {
+      name: editForm.name,
+      email: editForm.email,
+      role: editForm.role,
+      bio: editForm.bio
+    })
+    ElMessage.success('编辑成功')
+    showEditDialog.value = false
+    fetchUsers()
+  } catch (err) {
+    ElMessage.error('编辑失败')
+  } finally {
+    editLoading.value = false
+  }
+}
 
 let searchTimer = null
 

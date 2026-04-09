@@ -31,6 +31,10 @@
           <el-icon><OfficeBuilding /></el-icon>
           <span>班级管理</span>
         </el-menu-item>
+        <el-menu-item index="/teachers">
+          <el-icon><Avatar /></el-icon>
+          <span>教师管理</span>
+        </el-menu-item>
         <el-menu-item index="/questions">
           <el-icon><QuestionFilled /></el-icon>
           <span>问答管理</span>

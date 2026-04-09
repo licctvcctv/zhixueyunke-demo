@@ -11,6 +11,12 @@ export class ClassesController {
     return this.classesService.findAll();
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get('my/joined')
+  getMyJoined(@Request() req) {
+    return this.classesService.getJoinedClassIds(req.user.id);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.classesService.findOne(+id);

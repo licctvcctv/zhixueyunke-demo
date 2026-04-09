@@ -52,6 +52,7 @@ async function seed() {
   // ===== Users =====
   const hashedAdmin = await bcrypt.hash('admin123', 10);
   const hashedUser = await bcrypt.hash('123456', 10);
+  const hashedTeacher = await bcrypt.hash('teacher123', 10);
 
   const admin = await userRepo.save(userRepo.create({
     name: '管理员', email: 'admin@demo.com', password: hashedAdmin, role: 'admin', avatar: '', bio: '系统管理员',
@@ -66,7 +67,27 @@ async function seed() {
     name: '王五', email: 'wangwu@demo.com', password: hashedUser, avatar: '', bio: '英语专业大四学生',
   }));
 
-  console.log('用户数据已创建');
+  // ===== 教师用户 =====
+  const teacher1 = await userRepo.save(userRepo.create({
+    name: '刘教授', email: 'liu@demo.com', password: hashedTeacher, role: 'teacher', avatar: '', bio: '计算机科学与技术学院教授，主讲Python和Web前端开发',
+  }));
+  const teacher2 = await userRepo.save(userRepo.create({
+    name: '陈教授', email: 'chen@demo.com', password: hashedTeacher, role: 'teacher', avatar: '', bio: '计算机科学与技术学院副教授，主讲Java高级编程',
+  }));
+  const teacher3 = await userRepo.save(userRepo.create({
+    name: '赵教授', email: 'zhao@demo.com', password: hashedTeacher, role: 'teacher', avatar: '', bio: '数学学院教授，主讲高等数学和线性代数',
+  }));
+  const teacher4 = await userRepo.save(userRepo.create({
+    name: '周教授', email: 'zhou@demo.com', password: hashedTeacher, role: 'teacher', avatar: '', bio: '外国语学院教授，主讲大学英语',
+  }));
+  const teacher5 = await userRepo.save(userRepo.create({
+    name: '孙教授', email: 'sun@demo.com', password: hashedTeacher, role: 'teacher', avatar: '', bio: '物理学院教授，主讲大学物理',
+  }));
+  const teacher6 = await userRepo.save(userRepo.create({
+    name: '吴教授', email: 'wu@demo.com', password: hashedTeacher, role: 'teacher', avatar: '', bio: '艺术设计学院教授，主讲UI/UX设计',
+  }));
+
+  console.log('用户数据已创建（含教师）');
 
   // ===== Courses =====
   const coursesData = [
@@ -247,6 +268,12 @@ async function seed() {
 
   console.log('\n===== 种子数据创建完成 =====');
   console.log('管理员账号: admin@demo.com / admin123');
+  console.log('教师账号: liu@demo.com / teacher123 (刘教授)');
+  console.log('教师账号: chen@demo.com / teacher123 (陈教授)');
+  console.log('教师账号: zhao@demo.com / teacher123 (赵教授)');
+  console.log('教师账号: zhou@demo.com / teacher123 (周教授)');
+  console.log('教师账号: sun@demo.com / teacher123 (孙教授)');
+  console.log('教师账号: wu@demo.com / teacher123 (吴教授)');
   console.log('学生账号: zhangsan@demo.com / 123456');
   console.log('学生账号: lisi@demo.com / 123456');
   console.log('学生账号: wangwu@demo.com / 123456');

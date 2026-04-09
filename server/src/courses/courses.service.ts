@@ -26,12 +26,16 @@ export class CoursesService {
     }
     query = query.orderBy('course.createdAt', 'DESC');
     const courses = await query.getMany();
-    const result = [];
-    for (const c of courses) {
-      const lessonCount = await this.lessonRepo.count({ where: { courseId: c.id } });
-      result.push({ ...c, lessonCount });
-    }
-    return result;
+    if (courses.length === 0) return [];
+    const counts = await this.lessonRepo
+      .createQueryBuilder('l')
+      .select('l.courseId', 'courseId')
+      .addSelect('COUNT(*)', 'cnt')
+      .where('l.courseId IN (:...ids)', { ids: courses.map(c => c.id) })
+      .groupBy('l.courseId')
+      .getRawMany();
+    const countMap = new Map(counts.map(r => [r.courseId, +r.cnt]));
+    return courses.map(c => ({ ...c, lessonCount: countMap.get(c.id) || 0 }));
   }
 
   async findOne(id: number) {
@@ -92,12 +96,13 @@ export class CoursesService {
 
   async getEnrollments(userId: number) {
     const enrollments = await this.enrollmentRepo.find({ where: { userId } });
-    const courses = [];
-    for (const e of enrollments) {
-      const course = await this.courseRepo.findOne({ where: { id: e.courseId } });
-      if (course) courses.push(course);
-    }
-    return courses;
+    if (enrollments.length === 0) return [];
+    const courseIds = enrollments.map(e => e.courseId);
+    return this.courseRepo
+      .createQueryBuilder('c')
+      .where('c.id IN (:...ids)', { ids: courseIds })
+      .orderBy('c.createdAt', 'DESC')
+      .getMany();
   }
 
   async isEnrolled(courseId: number, userId: number): Promise<boolean> {

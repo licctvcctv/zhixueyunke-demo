@@ -78,8 +78,10 @@ export class PostsService {
     const post = await this.postRepo.findOne({ where: { id: postId } });
     if (!post) throw new NotFoundException('帖子不存在');
     if (post.authorId !== userId) throw new ForbiddenException('只能删除自己的帖子');
-    await this.commentRepo.delete({ targetType: 'post', targetId: postId });
-    await this.likeRepo.delete({ targetType: 'post', targetId: postId });
+    await Promise.all([
+      this.commentRepo.delete({ targetType: 'post', targetId: postId }),
+      this.likeRepo.delete({ targetType: 'post', targetId: postId }),
+    ]);
     await this.postRepo.remove(post);
     return { message: '已删除' };
   }

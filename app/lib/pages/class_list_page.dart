@@ -28,10 +28,19 @@ class _ClassListPageState extends State<ClassListPage> {
   Future<void> _loadData() async {
     try {
       setState(() { _loading = true; _error = null; });
-      final response = await ApiService().get(Api.classes);
-      final list = (response.data as List)
+      final responses = await Future.wait([
+        ApiService().get(Api.classes),
+        ApiService().get('/api/classes/my/joined').catchError((_) => null),
+      ]);
+      final list = (responses[0].data as List)
           .map((e) => ClassModel.fromJson(e as Map<String, dynamic>))
           .toList();
+      if (responses[1] != null && responses[1].data is List) {
+        final joined = (responses[1].data as List)
+            .map((e) => e is int ? e : int.tryParse(e.toString()) ?? 0)
+            .toSet();
+        _joinedClassIds.addAll(joined);
+      }
       setState(() { _classes = list; _loading = false; });
     } catch (e) {
       setState(() { _error = '加载失败，请检查网络'; _loading = false; });

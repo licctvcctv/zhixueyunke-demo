@@ -16,6 +16,7 @@ class CourseDetailPage extends StatefulWidget {
 class _CourseDetailPageState extends State<CourseDetailPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final TextEditingController _reviewController = TextEditingController();
   Course? _fullCourse;
   List<Map<String, dynamic>> _reviews = [];
   bool _isLoadingCourse = true;
@@ -80,9 +81,27 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     }
   }
 
+  Future<void> _addReview(String courseId) async {
+    if (_reviewController.text.trim().isEmpty) return;
+    try {
+      await ApiService().post('${Api.courses}/$courseId/comments', data: {
+        'content': _reviewController.text.trim(),
+      });
+      _reviewController.clear();
+      FocusScope.of(context).unfocus();
+      _fetchReviews(courseId);
+    } catch (e) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('评论失败，请重试')),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
+    _reviewController.dispose();
     super.dispose();
   }
 
@@ -406,30 +425,68 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                             ),
 
                   // Reviews tab
-                  _isLoadingReviews
-                      ? const Center(child: CircularProgressIndicator())
-                      : _reviews.isEmpty
-                          ? Center(
-                              child: Text(
-                                '暂无评价',
-                                style: TextStyle(color: Colors.grey[400]),
+                  Column(
+                    children: [
+                      Expanded(
+                        child: _isLoadingReviews
+                            ? const Center(child: CircularProgressIndicator())
+                            : _reviews.isEmpty
+                                ? Center(
+                                    child: Text(
+                                      '暂无评价，快来评价吧',
+                                      style: TextStyle(color: Colors.grey[400]),
+                                    ),
+                                  )
+                                : ListView.builder(
+                                    padding: const EdgeInsets.all(16),
+                                    itemCount: _reviews.length,
+                                    itemBuilder: (context, index) {
+                                      final review = _reviews[index];
+                                      return _buildReviewCard(
+                                        review['authorName'] ??
+                                            review['author'] ??
+                                            '匿名',
+                                        (review['rating'] ?? 5.0).toDouble(),
+                                        review['content'] ?? '',
+                                        review['createdAt'] ?? '',
+                                      );
+                                    },
+                                  ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: Colors.grey.shade200),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _reviewController,
+                                decoration: const InputDecoration(
+                                  hintText: '写评价...',
+                                  border: OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  isDense: true,
+                                ),
                               ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: _reviews.length,
-                              itemBuilder: (context, index) {
-                                final review = _reviews[index];
-                                return _buildReviewCard(
-                                  review['authorName'] ??
-                                      review['author'] ??
-                                      '匿名',
-                                  (review['rating'] ?? 5.0).toDouble(),
-                                  review['content'] ?? '',
-                                  review['createdAt'] ?? '',
-                                );
-                              },
                             ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.send,
+                                  color: Color(0xFF4A90D9)),
+                              onPressed: () => _addReview(course.id),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
