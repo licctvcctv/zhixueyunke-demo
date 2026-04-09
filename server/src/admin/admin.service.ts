@@ -273,12 +273,16 @@ export class AdminService {
   }
 
   // ===== 教师管理 =====
-  async getTeachers() {
-    const teachers = await this.userRepo.find({ where: { role: 'teacher' }, order: { createdAt: 'DESC' } });
-    return teachers.map(({ password, ...rest }) => ({
-      ...rest,
-      status: rest.status === 1 ? 'active' : 'disabled',
-    }));
+  async getTeachers(skip = 0, limit = 20, search?: string) {
+    let query = this.userRepo.createQueryBuilder('user').where('user.role = :role', { role: 'teacher' });
+    if (search) {
+      query = query.andWhere('(user.name LIKE :s OR user.email LIKE :s)', { s: `%${search}%` });
+    }
+    const [data, total] = await query.orderBy('user.createdAt', 'DESC').skip(skip).take(limit).getManyAndCount();
+    return {
+      list: data.map(({ password, ...rest }) => ({ ...rest, status: rest.status === 1 ? 'active' : 'disabled' })),
+      total,
+    };
   }
 
   async getTeacherCourses(teacherId: number) {

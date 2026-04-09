@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api.dart';
 import '../config/colors.dart';
 import '../models/course.dart';
@@ -23,6 +24,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
   bool _isLoadingReviews = true;
   bool _enrolled = false;
   bool _enrolling = false;
+  bool _isFavorited = false;
 
   @override
   void initState() {
@@ -33,7 +35,33 @@ class _CourseDetailPageState extends State<CourseDetailPage>
       _fetchCourseDetail(course.id);
       _fetchReviews(course.id);
       _checkEnrollment(course.id);
+      _loadFavoriteStatus(course.id);
     });
+  }
+
+  Future<void> _loadFavoriteStatus(String courseId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final favorites = prefs.getStringList('favorite_courses') ?? [];
+    if (mounted) setState(() => _isFavorited = favorites.contains(courseId));
+  }
+
+  Future<void> _toggleFavorite(String courseId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final favorites = prefs.getStringList('favorite_courses') ?? [];
+    setState(() {
+      if (_isFavorited) {
+        favorites.remove(courseId);
+        _isFavorited = false;
+      } else {
+        favorites.add(courseId);
+        _isFavorited = true;
+      }
+    });
+    await prefs.setStringList('favorite_courses', favorites);
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_isFavorited ? '已收藏' : '已取消收藏')),
+    );
   }
 
   Future<void> _checkEnrollment(String courseId) async {
@@ -162,6 +190,15 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                     expandedHeight: 220,
                     pinned: true,
                     backgroundColor: _getCoverColor(course.id),
+                    actions: [
+                      IconButton(
+                        icon: Icon(_isFavorited
+                            ? Icons.bookmark
+                            : Icons.bookmark_border),
+                        color: Colors.white,
+                        onPressed: () => _toggleFavorite(course.id),
+                      ),
+                    ],
                     flexibleSpace: FlexibleSpaceBar(
                       background: Container(
                         decoration: BoxDecoration(
@@ -416,6 +453,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                         arguments: {
                                           'lesson': lesson,
                                           'courseTitle': displayCourse.title,
+                                          'courseId': displayCourse.id,
                                         },
                                       );
                                     },
@@ -543,6 +581,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                   arguments: {
                                     'lesson': c.lessons[0],
                                     'courseTitle': c.title,
+                                    'courseId': c.id,
                                   },
                                 );
                               }

@@ -4,6 +4,7 @@ import 'package:chewie/chewie.dart';
 import '../config/api.dart';
 import '../models/lesson.dart';
 import '../models/comment.dart';
+import '../services/api_service.dart';
 
 class VideoPlayerPage extends StatefulWidget {
   const VideoPlayerPage({Key? key}) : super(key: key);
@@ -21,13 +22,9 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   bool _isVideoError = false;
   String _errorMessage = '';
 
-  final List<Comment> _comments = [
-    Comment(id: '1', author: '小明', content: '老师讲得很好，清晰易懂！', createdAt: '2024-03-15 14:30'),
-    Comment(id: '2', author: '小红', content: '这节课的内容非常实用，学到了很多。', createdAt: '2024-03-15 13:20'),
-    Comment(id: '3', author: '小李', content: '请问老师，这个知识点在考试中会怎么考？', createdAt: '2024-03-14 20:15'),
-    Comment(id: '4', author: '小王', content: '笔记已做好，感谢分享！', createdAt: '2024-03-14 18:00'),
-    Comment(id: '5', author: '小张', content: '希望能出更多这样的课程内容。', createdAt: '2024-03-14 15:30'),
-  ];
+  List<Comment> _comments = [];
+  bool _commentsLoading = true;
+  String? _courseId;
 
   @override
   void initState() {
@@ -39,7 +36,11 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     super.didChangeDependencies();
     if (!_initialized) {
       _initialized = true;
+      final args =
+          ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+      _courseId = args['courseId']?.toString();
       _initializeVideoPlayer();
+      if (_courseId != null) _fetchComments();
     }
   }
 
@@ -131,21 +132,43 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     super.dispose();
   }
 
-  void _addComment() {
-    if (_commentController.text.trim().isEmpty) return;
-    setState(() {
-      _comments.insert(
-        0,
-        Comment(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          author: '我',
-          content: _commentController.text.trim(),
-          createdAt: '刚刚',
-        ),
-      );
+  Future<void> _fetchComments() async {
+    try {
+      final response =
+          await ApiService().get('${Api.courses}/$_courseId/comments');
+      if (response.statusCode == 200) {
+        final data = response.data;
+        final list = data is List ? data : (data['comments'] ?? data['data'] ?? []);
+        if (mounted) {
+          setState(() {
+            _comments = (list as List).map((c) => Comment(
+              id: c['id']?.toString() ?? '',
+              author: c['authorName'] ?? c['author'] ?? '匿名',
+              content: c['content'] ?? '',
+              createdAt: c['createdAt'] ?? '',
+            )).toList();
+            _commentsLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('获取评论失败: $e');
+      if (mounted) setState(() => _commentsLoading = false);
+    }
+  }
+
+  Future<void> _addComment() async {
+    if (_commentController.text.trim().isEmpty || _courseId == null) return;
+    try {
+      await ApiService().post('${Api.courses}/$_courseId/comments', data: {
+        'content': _commentController.text.trim(),
+      });
       _commentController.clear();
-    });
-    FocusScope.of(context).unfocus();
+      FocusScope.of(context).unfocus();
+      await _fetchComments();
+    } catch (e) {
+      debugPrint('添加评论失败: $e');
+    }
   }
 
   @override
@@ -303,20 +326,30 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  '(${_comments.length})',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[400],
+                if (!_commentsLoading)
+                  Text(
+                    '(${_comments.length})',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[400],
+                    ),
                   ),
-                ),
               ],
             ),
           ),
 
           // Comments list
           Expanded(
-            child: ListView.builder(
+            child: _commentsLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _comments.isEmpty
+                    ? Center(
+                        child: Text(
+                          '暂无评论，快来评论吧',
+                          style: TextStyle(color: Colors.grey[400]),
+                        ),
+                      )
+                    : ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: _comments.length,
               itemBuilder: (context, index) {
@@ -330,7 +363,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                         radius: 16,
                         backgroundColor: const Color(0xFF4A90D9),
                         child: Text(
-                          comment.author[0],
+                          comment.author.isNotEmpty ? comment.author[0] : '?',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,

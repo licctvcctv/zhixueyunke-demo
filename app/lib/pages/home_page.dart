@@ -63,57 +63,32 @@ class _HomePageState extends State<HomePage> {
               ),
 
               // Banner
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
-                  height: 160,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF4A90D9), Color(0xFF6BB5FF)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+              SizedBox(
+                height: 160,
+                child: PageView(
+                  children: [
+                    _buildBannerItem(
+                      '欢迎来到智学云课',
+                      '海量优质课程，名师在线授课\n随时随地，想学就学',
+                      const Color(0xFF4A90D9),
+                      const Color(0xFF6BB5FF),
+                      Icons.school,
                     ),
-                  ),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        right: -20,
-                        bottom: -20,
-                        child: Icon(
-                          Icons.school,
-                          size: 140,
-                          color: Colors.white.withOpacity(0.1),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text(
-                              '欢迎来到智学云课',
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '海量优质课程，名师在线授课\n随时随地，想学就学',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.white.withOpacity(0.9),
-                                height: 1.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    _buildBannerItem(
+                      '热门课程推荐',
+                      'Python编程、高等数学、英语四级\n名师授课，助你高分通过',
+                      const Color(0xFF50C878),
+                      const Color(0xFF7DDFAB),
+                      Icons.local_fire_department,
+                    ),
+                    _buildBannerItem(
+                      '学习社区',
+                      '与同学交流学习心得\n互帮互助，共同进步',
+                      const Color(0xFFFF6B6B),
+                      const Color(0xFFFF9E9E),
+                      Icons.groups,
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 20),
@@ -291,6 +266,39 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 20),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBannerItem(String title, String subtitle, Color color1, Color color2, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [color1, color2],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(right: -20, bottom: -20, child: Icon(icon, size: 140, color: Colors.white.withOpacity(0.1))),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                  const SizedBox(height: 8),
+                  Text(subtitle, style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.9), height: 1.5)),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -525,7 +525,7 @@ function handleUploadError() {
 async function fetchTeachers() {
   try {
     const res = await api.get('/teachers')
-    teachers.value = res.data || []
+    teachers.value = res.data.list || res.data || []
   } catch (e) { console.error(e) }
 }
 

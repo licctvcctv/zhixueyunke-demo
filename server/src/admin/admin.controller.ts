@@ -181,9 +181,10 @@ export class AdminController {
 
   // ===== 教师管理 =====
   @Get('teachers')
-  getTeachers(@Request() req) {
+  getTeachers(@Request() req, @Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('skip') skip?: string, @Query('limit') limit?: string, @Query('search') search?: string) {
     this.adminService.checkAdmin(req.user.role);
-    return this.adminService.getTeachers();
+    const pg = this.parsePagination(page, pageSize, skip, limit);
+    return this.adminService.getTeachers(pg.skip, pg.limit, search);
   }
 
   @Post('teachers')
