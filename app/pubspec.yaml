@@ -1,0 +1,31 @@
+name: zhixueyunke
+description: "智学云课 - 在线教育平台"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.10.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  dio: ^4.0.6
+  provider: ^6.0.5
+  shared_preferences: ^2.2.0
+  cached_network_image: ^3.2.3
+  video_player: ^2.7.0
+  chewie: ^1.5.0
+  intl: ^0.18.0
+  shimmer: ^3.0.0
+  flutter_staggered_grid_view: ^0.6.2
+  pull_to_refresh: ^2.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
